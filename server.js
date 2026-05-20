@@ -106,12 +106,12 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
       return res.status(400).json({ error: '유효하지 않은 이메일 형식입니다.' });
     }
 
-    // name 검증: 길이 1~50자, HTML 태그 및 스크립트 문자 거부 (OWASP A03)
+    // name 검증: 길이 1~50자, HTML/스크립트 특수문자 거부 (OWASP A03)
     const nameVal = String(name).trim();
     if (nameVal.length === 0 || nameVal.length > 50) {
       return res.status(400).json({ error: '이름은 1~50자 이내여야 합니다.' });
     }
-    if (!/^[\p{L}\p{N}\s\-_.]+$/u.test(nameVal)) {
+    if (/[<>"'&;]/.test(nameVal)) {
       return res.status(400).json({ error: '이름에 사용할 수 없는 문자가 포함되어 있습니다.' });
     }
 
