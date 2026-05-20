@@ -41,6 +41,7 @@ function validatePassword(pw) {
 }
 
 // ── 미들웨어 ────────────────────────────────────────────────────
+app.set('trust proxy', 1); // Nginx 프록시 신뢰
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
