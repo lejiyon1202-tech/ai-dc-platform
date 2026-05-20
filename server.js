@@ -10,7 +10,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import {
   initDb, createUser, getUserByEmail, getUserById,
-  incrementFailedLogin, resetFailedLogin,
+  incrementFailedLogin, resetFailedLogin, purgeInvalidNames,
 } from './data/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -220,6 +220,8 @@ app.get('/api/health', (req, res) => res.json({
 
 // ── 시작 ─────────────────────────────────────────────────────────
 await initDb();
+const purged = purgeInvalidNames();
+if (purged > 0) console.log(`[INIT] 유효하지 않은 이름 user ${purged}건 정리`);
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[INIT] AI DC Platform: http://localhost:${PORT}`);
 });

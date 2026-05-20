@@ -83,3 +83,12 @@ export function resetFailedLogin(id) {
   );
   persist();
 }
+
+export function purgeInvalidNames() {
+  const stmt = db.prepare("DELETE FROM users WHERE name LIKE '%<%' OR name LIKE '%>%'");
+  stmt.run();
+  const changed = db.exec("SELECT changes() AS n")[0]?.values?.[0]?.[0] ?? 0;
+  stmt.free();
+  if (changed > 0) persist();
+  return changed;
+}
