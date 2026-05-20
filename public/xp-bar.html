@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — XP 역량 진행바</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding: var(--sp-xl) var(--sp-lg); max-width: 860px; margin: 0 auto; }
+
+    .xp-hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-lg);
+      margin-bottom: var(--sp-xl);
+    }
+    .xp-hero-left { flex: 1; }
+    .xp-hero-art  { width: 130px; height: 130px; flex-shrink: 0; opacity: 0.9; }
+    .xp-hero-art svg { width: 100%; height: 100%; }
+    .xp-header-name { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+    .xp-header-sub  { font-size: var(--fs-sm); color: var(--text-secondary); margin-top: 4px; }
+
+    .level-badge {
+      text-align: right;
+    }
+    .level-badge .lv {
+      font-size: var(--fs-2xl);
+      font-weight: var(--fw-bold);
+      color: var(--accent);
+      line-height: 1;
+    }
+    .level-badge .lv-label {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* ── Total XP Bar ── */
+    .total-xp-card {
+      background: var(--bg-card);
+      border: var(--border-accent);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-lg) var(--sp-xl);
+      margin-bottom: var(--sp-xl);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+    .total-xp-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse at top right, var(--accent-soft) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    .total-xp-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--sp-sm);
+    }
+    .total-xp-label { font-size: var(--fs-sm); color: var(--text-secondary); }
+    .total-xp-value {
+      font-size: var(--fs-lg);
+      font-weight: var(--fw-bold);
+      color: var(--accent);
+    }
+    .xp-track {
+      height: 8px;
+      background: var(--track-bg);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+    }
+    .xp-fill {
+      height: 100%;
+      border-radius: var(--radius-pill);
+      background: linear-gradient(90deg, var(--accent) 0%, var(--accent-light) 100%);
+      transition: width 0.8s var(--ease-out);
+      box-shadow: var(--shadow-glow-sm);
+    }
+    .xp-next-label {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+      margin-top: var(--sp-xs);
+      text-align: right;
+    }
+
+    /* ── Competency XP Grid ── */
+    .comp-section-title {
+      font-size: var(--fs-xs);
+      font-weight: var(--fw-medium);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: var(--sp-md);
+    }
+    .comp-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--sp-md);
+    }
+    .comp-item {
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-md);
+      padding: var(--sp-md);
+      box-shadow: var(--shadow-sm);
+      transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+    }
+    .comp-item:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--bc-hover);
+      box-shadow: var(--shadow-card-hover);
+    }
+    .comp-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--sp-sm);
+    }
+    .comp-name {
+      font-size: var(--fs-sm);
+      font-weight: var(--fw-medium);
+      color: var(--text-primary);
+    }
+    .comp-xp-val {
+      font-size: var(--fs-xs);
+      color: var(--text-secondary);
+    }
+    .comp-track {
+      height: 6px;
+      background: var(--track-bg);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+    }
+    .comp-fill {
+      height: 100%;
+      border-radius: var(--radius-pill);
+      transition: width 0.8s var(--ease-out);
+    }
+
+    .gain-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-sm);
+      margin-top: var(--sp-xl);
+    }
+    .gain-item {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-sm);
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-md);
+      padding: var(--sp-sm) var(--sp-md);
+      box-shadow: var(--shadow-sm);
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .gain-item:hover {
+      border-color: var(--bc-hover);
+      box-shadow: var(--shadow-card-hover);
+    }
+    .gain-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .gain-text { font-size: var(--fs-sm); color: var(--text-secondary); flex: 1; }
+    .gain-xp {
+      font-size: var(--fs-sm);
+      font-weight: var(--fw-bold);
+      color: var(--accent);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .comp-grid { grid-template-columns: 1fr; }
+      .xp-header { flex-direction: column; align-items: flex-start; gap: var(--sp-md); }
+    }
+
+    .lv-icon { font-size: 20px; color: var(--accent); display: block; margin-bottom: 2px; opacity: 0.85; }
+    .comp-ph  { font-size: 13px; color: inherit; margin-right: 4px; opacity: 0.8; }
+    .gain-ph  { font-size: 15px; flex-shrink: 0; }
+    .xp-title-ph { font-size: 18px; color: var(--accent); opacity: 0.75; margin-right: var(--sp-xs); vertical-align: middle; }
+  </style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="xp-hero">
+  <div class="xp-hero-left">
+    <div class="xp-header-name">김민준</div>
+    <div class="xp-header-sub">영업2팀 팀장 · AI DC 시뮬레이션 4종</div>
+    <div class="level-badge" style="margin-top:var(--sp-md)">
+      <i class="ph ph-arrow-up lv-icon" aria-hidden="true"></i>
+      <div class="lv">Lv.7</div>
+      <div class="lv-label">성장하는 중</div>
+    </div>
+  </div>
+  <div class="xp-hero-art" aria-hidden="true">
+    <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="80" cy="80" r="74" fill="rgba(200,169,110,0.05)" stroke="rgba(200,169,110,0.12)" stroke-width="1"/>
+      <rect x="22" y="112" width="14" height="30" rx="3" fill="rgba(200,169,110,0.22)"/>
+      <rect x="44" y="92" width="14" height="50" rx="3" fill="rgba(200,169,110,0.38)"/>
+      <rect x="66" y="70" width="14" height="72" rx="3" fill="rgba(200,169,110,0.55)"/>
+      <rect x="88" y="50" width="14" height="92" rx="3" fill="rgba(200,169,110,0.75)"/>
+      <path d="M23 112 L45 92 L67 70 L89 50" stroke="rgba(200,169,110,0.6)" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>
+      <circle cx="95" cy="38" r="11" fill="rgba(200,169,110,0.85)"/>
+      <path d="M88 49 Q82 60 80 72 L110 72 Q108 60 102 49 Q99 45 95 49z" fill="rgba(200,169,110,0.75)"/>
+      <path d="M80 62 Q70 56 67 49" stroke="rgba(200,169,110,0.8)" stroke-width="3" stroke-linecap="round"/>
+      <path d="M110 62 Q120 56 123 49" stroke="rgba(200,169,110,0.8)" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="136" cy="32" r="4" fill="rgba(200,169,110,0.65)"/>
+      <circle cx="144" cy="52" r="2.5" fill="rgba(200,169,110,0.45)"/>
+      <circle cx="130" cy="58" r="2" fill="rgba(200,169,110,0.4)"/>
+      <circle cx="18" cy="68" r="2" fill="rgba(200,169,110,0.35)"/>
+    </svg>
+  </div>
+</div>
+
+<!-- Total XP -->
+<div class="total-xp-card">
+  <div class="total-xp-row">
+    <span class="total-xp-label"><i class="ph ph-chart-line-up xp-title-ph" aria-hidden="true"></i>나의 성장 현황</span>
+    <span class="total-xp-value">3,240 / 4,000 XP</span>
+  </div>
+  <div class="xp-track">
+    <div class="xp-fill" id="totalFill" style="width:0%"></div>
+  </div>
+  <div class="xp-next-label">다음 레벨까지 760 XP</div>
+</div>
+
+<!-- Competency Grid -->
+<div class="comp-section-title">역량별 성장 여정</div>
+<div class="comp-grid" id="compGrid"></div>
+
+<!-- Recent XP Gains -->
+<div class="comp-section-title" style="margin-top:var(--sp-xl)">최근 성장 기록</div>
+<div class="gain-list" id="gainList"></div>
+
+<script>
+const BASE='https://sbi.3.39.80.158.nip.io';
+const uid=new URLSearchParams(location.search).get('u')||'learner-demo';
+const KEYS=['strategic_thinking','decision_making','organizational_influence','conflict_resolution','communication','collaboration','coaching','execution','problem_solving','change_leadership','results_orientation','self_awareness'];
+const comps=[
+  {name:'전략적 사고',xp:310,color:'var(--comp-1)',icon:'ph-target'},
+  {name:'의사결정',xp:280,color:'var(--comp-2)',icon:'ph-scales'},
+  {name:'영향력 행사',xp:350,color:'var(--comp-3)',icon:'ph-megaphone-simple'},
+  {name:'갈등 해결',xp:190,color:'var(--comp-4)',icon:'ph-handshake'},
+  {name:'커뮤니케이션',xp:420,color:'var(--comp-5)',icon:'ph-chat-circle'},
+  {name:'팀 리더십',xp:260,color:'var(--comp-6)',icon:'ph-users'},
+  {name:'코칭·육성',xp:300,color:'var(--comp-7)',icon:'ph-graduation-cap'},
+  {name:'실행력',xp:380,color:'var(--comp-8)',icon:'ph-lightning'},
+  {name:'혁신·창의',xp:140,color:'var(--comp-9)',icon:'ph-lightbulb'},
+  {name:'조직이해',xp:220,color:'var(--comp-10)',icon:'ph-buildings'},
+  {name:'고객지향',xp:290,color:'var(--comp-11)',icon:'ph-star'},
+  {name:'자기개발',xp:100,color:'var(--comp-12)',icon:'ph-book-open'},
+].map(c=>({...c,max:400}));
+let gains=[
+  {name:'코칭 트레이너 시뮬레이션 완료',comp:'코칭·육성',xp:50,color:'var(--comp-7)',icon:'ph-graduation-cap'},
+  {name:'갈등 상황 수용 단계 도달',comp:'갈등 해결',xp:30,color:'var(--comp-4)',icon:'ph-handshake'},
+  {name:'In-Basket 우선순위 정확도 85%',comp:'의사결정',xp:40,color:'var(--comp-2)',icon:'ph-scales'},
+];
+let livePct=81;
+function render(){
+  const g=document.getElementById('compGrid');
+  comps.forEach(c=>{
+    const p=Math.min(c.xp/c.max*100,100).toFixed(1);
+    g.insertAdjacentHTML('beforeend',`<div class="comp-item" style="border-top:2px solid ${c.color}"><div class="comp-top"><span class="comp-name"><i class="ph ${c.icon} comp-ph" aria-hidden="true"></i>${c.name}</span><span class="comp-xp-val">${c.xp} XP</span></div><div class="comp-track"><div class="comp-fill" data-pct="${p}" style="width:0%;background:${c.color}"></div></div></div>`);
+  });
+  const gl=document.getElementById('gainList');
+  gains.forEach(g2=>{gl.insertAdjacentHTML('beforeend',`<div class="gain-item"><i class="ph ${g2.icon} gain-ph" style="color:${g2.color}" aria-hidden="true"></i><div class="gain-text">${g2.name} <span style="color:var(--text-muted)">· ${g2.comp}</span></div><div class="gain-xp">+${g2.xp} XP</div></div>`);});
+  requestAnimationFrame(()=>{
+    document.getElementById('totalFill').style.width=livePct+'%';
+    document.querySelectorAll('.comp-fill').forEach(el=>{el.style.width=el.dataset.pct+'%';});
+  });
+}
+(async()=>{
+  try{
+    const d=await(await fetch(`${BASE}/api/stats/learner/${uid}`)).json();
+    const xp=d.xp||0;
+    livePct=Math.min(xp/4000*100,100).toFixed(1);
+    document.querySelector('.total-xp-value').textContent=`${xp.toLocaleString()} / 4,000 XP`;
+    document.querySelector('.xp-next-label').textContent=`다음 레벨까지 ${(4000-xp).toLocaleString()} XP`;
+    document.querySelector('.lv').textContent=`Lv.${d.level||1}`;
+    KEYS.forEach((k,i)=>{if(d.competencies?.[k]!=null)comps[i].xp=Math.round(d.competencies[k]*400);});
+    if(d.recentStatements?.length) gains=d.recentStatements.slice(0,3).map(s=>({name:`${s.sim} ${s.verb}`,comp:'성장',xp:s.score||10,color:'var(--accent)',icon:'ph-lightning'}));
+  }catch(e){}
+  render();
+})();
+</script>
+</body>
+</html>

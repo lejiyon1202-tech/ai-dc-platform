@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — 로그인</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--sp-lg);
+    }
+
+    /* ── Login Container ── */
+    .login-wrap {
+      display: flex;
+      width: 100%;
+      max-width: 900px;
+      min-height: 540px;
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    /* ── Left Panel (Brand) ── */
+    .brand-panel {
+      flex: 1;
+      background: linear-gradient(160deg, rgba(184,146,58,0.12) 0%, rgba(37,99,235,0.06) 100%);
+      border-right: var(--border-base);
+      padding: var(--sp-xl);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .brand-logo {
+      font-size: var(--fs-xl);
+      font-weight: var(--fw-bold);
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+    .brand-logo span { color: var(--text-primary); }
+    .brand-tagline {
+      font-size: var(--fs-lg);
+      font-weight: var(--fw-bold);
+      line-height: 1.3;
+      color: var(--text-primary);
+      margin-bottom: var(--sp-md);
+    }
+    .brand-tagline em { color: var(--accent); font-style: normal; }
+    .brand-desc {
+      font-size: var(--fs-sm);
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: var(--sp-xl);
+    }
+    .brand-features { display: flex; flex-direction: column; gap: var(--sp-sm); }
+    .brand-feature {
+      display: flex; align-items: center; gap: var(--sp-sm);
+      font-size: var(--fs-sm); color: var(--text-secondary);
+    }
+    .feature-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* ── Right Panel (Form) ── */
+    .form-panel {
+      width: 380px;
+      flex-shrink: 0;
+      padding: var(--sp-xl);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .form-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); margin-bottom: 4px; }
+    .form-sub   { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--sp-xl); }
+
+    .form-group { margin-bottom: var(--sp-md); }
+    .form-label {
+      display: block;
+      font-size: var(--fs-sm);
+      font-weight: var(--fw-medium);
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: var(--border-base);
+      border-radius: var(--radius-md);
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-size: var(--fs-base);
+      font-family: var(--font-base);
+      box-sizing: border-box;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-border);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .form-input::placeholder { color: var(--text-muted); }
+
+    .form-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--sp-lg);
+    }
+    .remember-wrap {
+      display: flex; align-items: center; gap: 8px;
+      font-size: var(--fs-sm); color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .forgot-link {
+      font-size: var(--fs-sm);
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .forgot-link:hover { text-decoration: underline; }
+
+    .btn-login {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: var(--text-on-accent);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--fs-base);
+      font-weight: var(--fw-bold);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(184,146,58,0.3);
+      transition: opacity var(--transition), transform var(--transition);
+      margin-bottom: var(--sp-md);
+    }
+    .btn-login:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    .sso-divider {
+      text-align: center;
+      position: relative;
+      margin-bottom: var(--sp-md);
+    }
+    .sso-divider::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 0; right: 0;
+      height: 1px;
+      background: var(--border-base);
+    }
+    .sso-divider span {
+      position: relative;
+      background: var(--bg-card);
+      padding: 0 var(--sp-sm);
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .btn-sso {
+      width: 100%;
+      padding: 11px;
+      background: var(--bg-base);
+      color: var(--text-secondary);
+      border: var(--border-base);
+      border-radius: var(--radius-md);
+      font-size: var(--fs-sm);
+      font-weight: var(--fw-medium);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .btn-sso:hover { border-color: var(--bc-hover); box-shadow: var(--shadow-sm); }
+
+    .form-footer {
+      margin-top: var(--sp-lg);
+      text-align: center;
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 720px) {
+      .brand-panel { display: none; }
+      .form-panel  { width: 100%; }
+      .login-wrap  { max-width: 420px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-wrap" role="main">
+
+  <!-- 브랜드 패널 -->
+  <div class="brand-panel" aria-hidden="true">
+    <div>
+      <div class="brand-logo">AI <span>DC</span></div>
+    </div>
+    <div>
+      <div class="brand-tagline">
+        AI와 함께하는<br><em>역량 성장 여정</em>
+      </div>
+      <div class="brand-desc">
+        4가지 AI 시뮬레이션으로 12역량을 개발하고<br>
+        성장 여정을 동료와 함께 기록하세요.
+      </div>
+      <div class="brand-features">
+        <div class="brand-feature">
+          <div class="feature-dot"></div>
+          <span>AI In-Basket · Role-Playing · Presentation · GD</span>
+        </div>
+        <div class="brand-feature">
+          <div class="feature-dot"></div>
+          <span>실시간 AI 피드백 + 12역량 XP 시스템</span>
+        </div>
+        <div class="brand-feature">
+          <div class="feature-dot"></div>
+          <span>동료 코호트 함께 성장하는 여정</span>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:var(--fs-xs);color:var(--text-muted)">Development Center · Hunet</div>
+  </div>
+
+  <!-- 로그인 폼 -->
+  <div class="form-panel">
+    <div class="form-title">로그인</div>
+    <div class="form-sub">AI DC 학습을 시작하려면 로그인하세요</div>
+
+    <form action="#" method="POST" novalidate aria-label="로그인 폼">
+      <div class="form-group">
+        <label class="form-label" for="email">이메일</label>
+        <input
+          id="email"
+          class="form-input"
+          type="email"
+          name="email"
+          placeholder="이메일 주소 입력"
+          autocomplete="email"
+          required
+          aria-required="true"
+        />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">비밀번호</label>
+        <input
+          id="password"
+          class="form-input"
+          type="password"
+          name="password"
+          placeholder="비밀번호 입력"
+          autocomplete="current-password"
+          required
+          aria-required="true"
+        />
+      </div>
+      <div class="form-actions">
+        <label class="remember-wrap">
+          <input type="checkbox" name="remember" aria-label="로그인 상태 유지">
+          <span>로그인 상태 유지</span>
+        </label>
+        <a href="#" class="forgot-link">비밀번호 찾기</a>
+      </div>
+      <button type="submit" class="btn-login" aria-label="로그인">
+        로그인
+      </button>
+    </form>
+
+    <div class="sso-divider"><span>또는</span></div>
+
+    <button class="btn-sso" type="button" aria-label="회사 SSO로 로그인">
+      <i class="ph ph-buildings" aria-hidden="true"></i>
+      회사 SSO로 로그인
+    </button>
+
+    <div class="form-footer">
+      계정 문의: <a href="mailto:academy@hunet.co.kr" style="color:var(--accent)">academy@hunet.co.kr</a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

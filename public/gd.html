@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — AI Group Discussion</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding: 0; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+    .sim-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--sp-sm) var(--sp-lg);
+      background: var(--bg-card); border-bottom: var(--border-base);
+      box-shadow: var(--shadow-sm); flex-shrink: 0;
+    }
+    .sim-title-wrap { display: flex; align-items: center; gap: var(--sp-sm); }
+    .sim-type-badge {
+      padding: 3px 10px; border-radius: var(--radius-pill);
+      font-size: var(--fs-xs); font-weight: var(--fw-medium);
+      background: color-mix(in srgb, var(--sim-gd) 12%, transparent);
+      color: var(--sim-gd);
+      border: 1px solid color-mix(in srgb, var(--sim-gd) 30%, transparent);
+    }
+    .sim-title { font-size: var(--fs-base); font-weight: var(--fw-bold); }
+    .gd-stats { display: flex; gap: var(--sp-md); }
+    .gd-stat {
+      display: flex; align-items: center; gap: 4px;
+      font-size: var(--fs-xs); color: var(--text-secondary);
+    }
+    .stat-val { font-weight: var(--fw-bold); color: var(--sim-gd); }
+
+    /* ── Topic Bar ── */
+    .topic-bar {
+      padding: var(--sp-sm) var(--sp-lg);
+      background: color-mix(in srgb, var(--sim-gd) 06%, var(--bg-base));
+      border-bottom: var(--border-base);
+      flex-shrink: 0;
+    }
+    .topic-label { font-size: var(--fs-xs); color: var(--text-muted); margin-bottom: 2px; }
+    .topic-text  { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+    .gd-layout { flex: 1; display: flex; overflow: hidden; }
+    /* ── Participant Panel ── */
+    .participant-panel {
+      width: 200px; flex-shrink: 0;
+      background: var(--bg-base); border-right: var(--border-base);
+      overflow-y: auto; padding: var(--sp-md);
+    }
+    .panel-label {
+      font-size: var(--fs-xs); font-weight: var(--fw-medium);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-muted); margin-bottom: var(--sp-md);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .participant-item {
+      display: flex; align-items: center; gap: var(--sp-sm);
+      padding: var(--sp-sm);
+      border-radius: var(--radius-md);
+      margin-bottom: 6px;
+      background: var(--bg-card);
+      border: var(--border-base);
+    }
+    .participant-item.speaking { border-color: var(--sim-gd); }
+    .participant-item.me { border-color: var(--accent); background: var(--accent-dim); }
+    .part-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--fs-xs); font-weight: var(--fw-bold);
+      flex-shrink: 0;
+    }
+    .part-name  { font-size: var(--fs-xs); font-weight: var(--fw-medium); }
+    .part-role  { font-size: 10px; color: var(--text-muted); }
+    .speaking-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--sim-gd); margin-left: auto; flex-shrink: 0;
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
+
+    /* ── Chat Area ── */
+    .gd-chat { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .gd-messages {
+      flex: 1; overflow-y: auto;
+      padding: var(--sp-md);
+      display: flex; flex-direction: column; gap: var(--sp-sm);
+    }
+    .gd-bubble-wrap { display: flex; gap: var(--sp-sm); max-width: 80%; }
+    .gd-bubble-wrap.me-wrap { margin-left: auto; flex-direction: row-reverse; }
+    .gd-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: var(--fw-bold);
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .gd-bubble {
+      padding: var(--sp-sm) var(--sp-md);
+      border-radius: var(--radius-lg); font-size: var(--fs-sm); line-height: 1.6;
+      box-shadow: var(--shadow-sm);
+    }
+    .ai-gd-bubble {
+      background: var(--bg-card); border: var(--border-base);
+      border-top-left-radius: 4px;
+    }
+    .me-gd-bubble {
+      background: var(--sim-gd); color: var(--text-on-accent);
+      border-top-right-radius: 4px;
+    }
+    .bubble-footer { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .me-wrap .bubble-footer { text-align: right; }
+    .lead-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 1px 6px; border-radius: var(--radius-pill);
+      font-size: 10px; background: var(--accent-dim); color: var(--accent);
+      margin-left: 4px;
+    }
+
+    /* ── Turn Indicator ── */
+    .turn-bar {
+      padding: var(--sp-sm) var(--sp-md);
+      background: var(--bg-base); border-top: var(--border-base);
+      display: flex; align-items: center; gap: var(--sp-md); flex-shrink: 0;
+    }
+    .turn-hint {
+      flex: 1; font-size: var(--fs-xs); color: var(--text-secondary);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .lead-count {
+      font-size: var(--fs-xs); color: var(--text-muted);
+    }
+    .lead-count span { color: var(--accent); font-weight: var(--fw-bold); }
+
+    /* ── Input Area ── */
+    .input-area {
+      padding: var(--sp-md) var(--sp-lg);
+      background: var(--bg-card); border-top: var(--border-base);
+      flex-shrink: 0;
+    }
+    .quick-row { display: flex; gap: 6px; margin-bottom: var(--sp-sm); flex-wrap: wrap; }
+    .quick-btn {
+      padding: 4px 12px; border-radius: var(--radius-pill);
+      font-size: var(--fs-xs); border: var(--border-base);
+      background: var(--bg-base); color: var(--text-secondary);
+      cursor: pointer; transition: border-color var(--transition);
+    }
+    .quick-btn:hover { border-color: var(--bc-hover); color: var(--text-primary); }
+    .input-row { display: flex; gap: var(--sp-sm); }
+    .gd-input {
+      flex: 1; padding: 10px 14px;
+      border: var(--border-base); border-radius: var(--radius-md);
+      background: var(--bg-base); color: var(--text-primary);
+      font-size: var(--fs-sm); font-family: var(--font-base);
+    }
+    .gd-input:focus { outline: none; border-color: var(--accent-border); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .send-btn {
+      width: 44px; height: 44px; border-radius: var(--radius-md);
+      background: var(--sim-gd); color: var(--text-on-accent);
+      border: none; cursor: pointer; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity var(--transition);
+    }
+    .send-btn:hover { opacity: 0.88; }
+
+    @media (max-width: 700px) { .participant-panel { display: none; } }
+  </style>
+</head>
+<body>
+
+<header class="sim-topbar" role="banner">
+  <div class="sim-title-wrap">
+    <span class="sim-type-badge" aria-label="시뮬레이션 유형">AI GD</span>
+    <span class="sim-title">그룹 토론 시뮬레이션</span>
+  </div>
+  <div class="gd-stats" role="region" aria-label="토론 현황">
+    <div class="gd-stat">
+      <i class="ph ph-megaphone-simple" aria-hidden="true"></i>
+      발언 리드: <span class="stat-val" id="leadCount" aria-label="발언 리드 1회">1</span>/3
+    </div>
+    <div class="gd-stat">
+      <i class="ph ph-clock" aria-hidden="true"></i>
+      <span id="timer" aria-label="남은 시간">22:15</span>
+    </div>
+  </div>
+</header>
+
+<div class="topic-bar" role="region" aria-label="토론 주제">
+  <div class="topic-label">토론 주제</div>
+  <div class="topic-text">팀 성과 부진의 근본 원인과 단기·장기 개선 방안</div>
+</div>
+
+<div class="gd-layout" role="main">
+  <!-- 참여자 목록 -->
+  <nav class="participant-panel" aria-label="토론 참여자">
+    <div class="panel-label"><i class="ph ph-users" aria-hidden="true"></i> 참여자</div>
+    <div id="participants"></div>
+  </nav>
+
+  <!-- 토론 영역 -->
+  <section class="gd-chat" aria-label="토론 대화">
+    <div class="gd-messages" id="gdMessages" role="log" aria-live="polite" aria-label="토론 내용"></div>
+    <div class="turn-bar">
+      <div class="turn-hint">
+        <i class="ph ph-arrow-bend-right-up" aria-hidden="true"></i>
+        타인 의견을 인용하여 확장 발언하면 발언 리드로 인정됩니다
+      </div>
+      <div class="lead-count">발언 리드 <span id="leadCountSmall">1</span>/3 달성</div>
+    </div>
+  </section>
+</div>
+
+<footer class="input-area">
+  <div class="quick-row" aria-label="빠른 발언 제안">
+    <button class="quick-btn" type="button" aria-label="의견 동의·확장">의견 동의·확장</button>
+    <button class="quick-btn" type="button" aria-label="새 방향 제시">새 방향 제시</button>
+    <button class="quick-btn" type="button" aria-label="근거 보완 요청">근거 보완 요청</button>
+    <button class="quick-btn" type="button" aria-label="합의 도출">합의 도출</button>
+  </div>
+  <div class="input-row">
+    <input type="text" id="gdInput" class="gd-input" placeholder="발언 내용을 입력하세요..." aria-label="발언 입력" aria-required="true" />
+    <button id="sendBtn" class="send-btn" aria-label="발언 전송">
+      <i class="ph ph-paper-plane-right" aria-hidden="true"></i>
+    </button>
+  </div>
+</footer>
+
+<script>
+const css = getComputedStyle(document.documentElement);
+const cv = k => css.getPropertyValue(k).trim();
+const gdColor = cv('--sim-gd');
+const accentColor = cv('--accent');
+
+const participants = [
+  { name: '김민준', role: '나 (팀장)', me: true },
+  { name: 'AI 이서연', role: 'AI · 영업1팀', color: cv('--comp-1') },
+  { name: 'AI 박준혁', role: 'AI · 전략기획팀', speaking: true, color: cv('--comp-3') },
+  { name: 'AI 최지은', role: 'AI · HR팀', color: cv('--comp-7') },
+];
+const pEl = document.getElementById('participants');
+participants.forEach(p => {
+  const avatarBg = p.me ? accentColor : (p.color || gdColor);
+  pEl.insertAdjacentHTML('beforeend', `
+    <div class="participant-item${p.speaking ? ' speaking' : ''}${p.me ? ' me' : ''}" role="listitem" aria-label="${p.name}${p.speaking ? ' (발언 중)' : ''}${p.me ? ' (나)' : ''}">
+      <div class="part-avatar" style="background:${avatarBg}18;color:${avatarBg}" aria-hidden="true">${p.name.slice(0,1)}</div>
+      <div>
+        <div class="part-name">${p.name}${p.me ? ' <span style="font-size:10px;color:var(--accent)">(나)</span>' : ''}</div>
+        <div class="part-role">${p.role}</div>
+      </div>
+      ${p.speaking ? '<div class="speaking-dot" aria-label="발언 중"></div>' : ''}
+    </div>`);
+});
+
+const messages = [
+  { name:'AI 이서연', text:'팀 성과 부진의 주된 원인은 시장 환경 변화에 대한 빠른 대응 부족이라고 생각합니다. 특히 고객사 요구사항이 빠르게 변하는 상황에서 내부 의사결정 프로세스가 이를 따라가지 못하는 점이 핵심입니다.', time:'14:22', color: cv('--comp-1') },
+  { name:'나', text:'이서연 씨 말씀에 동의하면서, 추가적으로 팀 내 역할 분담 불명확성도 중요한 원인이라고 생각합니다. 빠른 대응을 하려면 누가 무엇을 결정할 수 있는지 명확해야 합니다.', time:'14:23', me:true, lead:true },
+  { name:'AI 박준혁', text:'두 분 의견을 종합해보면, 단기적으로는 의사결정 권한을 명확히 하고, 장기적으로는 팀원들의 역량 개발이 필요하다고 봅니다. 구체적인 개선안이 있으신가요?', time:'14:24', color: cv('--comp-3') },
+];
+const mEl = document.getElementById('gdMessages');
+messages.forEach(m => {
+  const isMe = !!m.me;
+  const avatarBg = isMe ? accentColor : (m.color || gdColor);
+  mEl.insertAdjacentHTML('beforeend', `
+    <div class="gd-bubble-wrap${isMe ? ' me-wrap' : ''}" role="article" aria-label="${m.name}의 발언">
+      <div class="gd-avatar" style="background:${avatarBg}18;color:${avatarBg}" aria-hidden="true">${m.name.slice(0,1)}</div>
+      <div>
+        <div class="gd-bubble ${isMe ? 'me-gd-bubble' : 'ai-gd-bubble'}">
+          ${m.text}
+          ${m.lead ? '<span class="lead-badge" aria-label="발언 리드 인정"><i class="ph ph-megaphone-simple"></i> 리드</span>' : ''}
+        </div>
+        <div class="bubble-footer">${m.name} · ${m.time}</div>
+      </div>
+    </div>`);
+});
+
+let sec = 22 * 60 + 15;
+const timerEl = document.getElementById('timer');
+const t = setInterval(() => {
+  if (sec <= 0) { clearInterval(t); return; }
+  sec--;
+  const m = String(Math.floor(sec / 60)).padStart(2,'0');
+  const s = String(sec % 60).padStart(2,'0');
+  timerEl.textContent = `${m}:${s}`;
+}, 1000);
+
+document.getElementById('sendBtn').addEventListener('click', () => {
+  const input = document.getElementById('gdInput');
+  const text = input.value.trim();
+  if (!text) return;
+  mEl.insertAdjacentHTML('beforeend', `
+    <div class="gd-bubble-wrap me-wrap" role="article" aria-label="나의 발언">
+      <div class="gd-avatar" style="background:${accentColor}18;color:${accentColor}" aria-hidden="true">나</div>
+      <div>
+        <div class="gd-bubble me-gd-bubble">${text}</div>
+        <div class="bubble-footer">나 · 방금</div>
+      </div>
+    </div>`);
+  mEl.scrollTop = mEl.scrollHeight;
+  input.value = '';
+});
+</script>
+</body>
+</html>

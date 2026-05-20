@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — 시뮬레이션 결과</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding: var(--sp-xl) var(--sp-lg); max-width: 820px; margin: 0 auto; }
+
+    /* ── Result Header ── */
+    .result-header {
+      text-align: center;
+      margin-bottom: var(--sp-xl);
+    }
+    .sim-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 14px;
+      border-radius: var(--radius-pill);
+      font-size: var(--fs-xs);
+      font-weight: var(--fw-medium);
+      margin-bottom: var(--sp-md);
+    }
+    .result-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); margin-bottom: 4px; }
+    .result-sub   { font-size: var(--fs-sm); color: var(--text-secondary); }
+
+    /* ── Score Card ── */
+    .score-card {
+      background: var(--bg-card);
+      border: var(--border-accent);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-xl);
+      display: flex; align-items: center; gap: var(--sp-xl);
+      margin-bottom: var(--sp-xl);
+      position: relative; overflow: hidden;
+      box-shadow: var(--shadow-glow);
+    }
+    .score-card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at right, var(--accent-soft) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .score-circle {
+      width: 96px; height: 96px; flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      border: 3px solid var(--accent-border);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .score-num   { font-size: 32px; font-weight: var(--fw-bold); color: var(--accent); line-height: 1; }
+    .score-label { font-size: var(--fs-xs); color: var(--text-muted); }
+    .score-info  { flex: 1; }
+    .score-tier  { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin-bottom: 4px; }
+    .score-desc  { font-size: var(--fs-sm); color: var(--text-secondary); line-height: 1.6; }
+
+    /* ── XP Gain ── */
+    .xp-gain-card {
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-lg) var(--sp-xl);
+      margin-bottom: var(--sp-xl);
+      box-shadow: var(--shadow-card);
+    }
+    .xp-gain-title { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text-muted); margin-bottom: var(--sp-md); }
+    .xp-items { display: flex; gap: var(--sp-md); flex-wrap: wrap; }
+    .xp-item {
+      display: flex; align-items: center; gap: var(--sp-sm);
+      padding: var(--sp-sm) var(--sp-md);
+      background: var(--bg-base);
+      border-radius: var(--radius-md);
+      border: var(--border-base);
+    }
+    .xp-item-icon { font-size: 18px; flex-shrink: 0; }
+    .xp-item-name { font-size: var(--fs-sm); color: var(--text-secondary); }
+    .xp-item-val  { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--accent); margin-left: 4px; }
+
+    /* ── Competency Scores ── */
+    .comp-scores { display: flex; flex-direction: column; gap: 12px; margin-bottom: var(--sp-xl); }
+    .comp-row {
+      display: flex; align-items: center; gap: var(--sp-md);
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-md);
+      padding: var(--sp-sm) var(--sp-md);
+      box-shadow: var(--shadow-sm);
+    }
+    .comp-name { flex: 1; font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+    .comp-track-wrap {
+      flex: 2;
+      height: 6px;
+      background: var(--track-bg);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+    }
+    .comp-track-fill { height: 100%; border-radius: var(--radius-pill); transition: width 0.8s var(--ease-out); }
+    .comp-score-val {
+      font-size: var(--fs-sm); font-weight: var(--fw-bold);
+      min-width: 36px; text-align: right;
+    }
+    .comp-delta {
+      font-size: var(--fs-xs);
+      padding: 2px 6px;
+      border-radius: var(--radius-pill);
+      min-width: 36px; text-align: center;
+    }
+    .delta-up { background: color-mix(in srgb, var(--comp-3) 12%, transparent); color: var(--comp-3); }
+
+    /* ── Feedback ── */
+    .feedback-card {
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-lg);
+      margin-bottom: var(--sp-xl);
+      box-shadow: var(--shadow-card);
+    }
+    .feedback-title { font-size: var(--fs-base); font-weight: var(--fw-bold); margin-bottom: var(--sp-sm); }
+    .feedback-text  { font-size: var(--fs-sm); color: var(--text-secondary); line-height: 1.8; }
+
+    /* ── Actions ── */
+    .result-actions {
+      display: flex; gap: var(--sp-md); justify-content: center; flex-wrap: wrap;
+    }
+    .btn-next {
+      padding: 12px 28px;
+      background: var(--accent); color: var(--text-on-accent);
+      border: none; border-radius: var(--radius-pill);
+      font-size: var(--fs-base); font-weight: var(--fw-bold);
+      cursor: pointer; box-shadow: 0 4px 12px rgba(184,146,58,0.3);
+      transition: opacity var(--transition);
+    }
+    .btn-next:hover { opacity: 0.88; }
+    .btn-retry {
+      padding: 12px 28px;
+      background: var(--bg-card); color: var(--text-primary);
+      border: var(--border-base); border-radius: var(--radius-pill);
+      font-size: var(--fs-base); font-weight: var(--fw-medium);
+      cursor: pointer; box-shadow: var(--shadow-sm);
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .btn-retry:hover { border-color: var(--bc-hover); box-shadow: var(--shadow-card-hover); }
+
+    @media (max-width: 580px) {
+      .score-card { flex-direction: column; text-align: center; }
+      .xp-items { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="result-header">
+  <div class="sim-badge" id="simBadge"></div>
+  <div class="result-title">시뮬레이션 완료!</div>
+  <div class="result-sub" id="resultSub"></div>
+</div>
+
+<div class="score-card" role="region" aria-label="종합 점수">
+  <div class="score-circle">
+    <div class="score-num" id="scoreNum">—</div>
+    <div class="score-label">점수</div>
+  </div>
+  <div class="score-info">
+    <div class="score-tier" id="scoreTier"></div>
+    <div class="score-desc" id="scoreDesc"></div>
+  </div>
+</div>
+
+<div class="xp-gain-card" role="region" aria-label="획득 XP">
+  <div class="xp-gain-title">
+    <i class="ph ph-star" aria-hidden="true"></i> 획득 XP
+  </div>
+  <div class="xp-items" id="xpItems"></div>
+</div>
+
+<div class="section-title">역량별 점수</div>
+<div class="comp-scores" id="compScores"></div>
+
+<div class="feedback-card" role="region" aria-label="AI 피드백">
+  <div class="feedback-title">
+    <i class="ph ph-chat-text" aria-hidden="true"></i> AI 피드백
+  </div>
+  <div class="feedback-text" id="feedbackText"></div>
+</div>
+
+<div class="result-actions">
+  <button class="btn-next" id="btnNext" aria-label="성장 여정 확인">
+    <i class="ph ph-arrow-up-right" aria-hidden="true"></i>
+    성장 여정 확인
+  </button>
+  <button class="btn-retry" aria-label="다시 하기">
+    <i class="ph ph-arrow-clockwise" aria-hidden="true"></i>
+    다시 하기
+  </button>
+</div>
+
+<script>
+const BASE='https://sbi.3.39.80.158.nip.io';
+const sp=new URLSearchParams(location.search);
+const uid=sp.get('u')||'learner-demo';
+const simParam=sp.get('sim')||'roleplay';
+const scoreParam=parseInt(sp.get('score'))||78;
+const SIM_META={
+  roleplay:{name:'AI Role-Playing',colorVar:'--sim-roleplay',icon:'ph-chats-circle',comps:['코칭·육성','갈등 해결','커뮤니케이션'],keys:['coaching','conflict_resolution','communication'],cvars:['--comp-7','--comp-4','--comp-5']},
+  inbasket:{name:'AI In-Basket',colorVar:'--sim-inbasket',icon:'ph-tray',comps:['의사결정','실행력','고객지향'],keys:['decision_making','execution','results_orientation'],cvars:['--comp-2','--comp-8','--comp-11']},
+  gd:{name:'AI GD',colorVar:'--sim-gd',icon:'ph-users-three',comps:['영향력 행사','팀 리더십','조직이해'],keys:['organizational_influence','collaboration','change_leadership'],cvars:['--comp-3','--comp-6','--comp-10']},
+};
+const meta=SIM_META[simParam]||SIM_META.roleplay;
+const result={
+  simName:meta.name,simColorVar:meta.colorVar,date:'2026-05-20',
+  score:scoreParam,tier:scoreParam>=85?'우수':scoreParam>=70?'성장 중':'개선 필요',
+  tierDesc:'시뮬레이션을 완료했습니다. 역량 데이터가 LRS에 기록되었습니다.',
+  competencies:meta.comps.map((name,i)=>({name,score:65,prev:60,colorVar:meta.cvars[i]})),
+  xpGains:meta.comps.map((name,i)=>({label:name,xp:Math.round(scoreParam/3),colorVar:meta.cvars[i],icon:'ph-lightning'})),
+  feedback:'이번 시뮬레이션을 완료했습니다. 역량 점수가 LRS에 기록되었습니다.',
+};
+const css=getComputedStyle(document.documentElement);
+const cv=k=>css.getPropertyValue(k).trim();
+function renderResult(){
+  const color=cv(result.simColorVar);
+  document.getElementById('simBadge').style.cssText=`background:${color}18;color:${color};border:1px solid ${color}40`;
+  document.getElementById('simBadge').innerHTML=`<i class="ph ${meta.icon}" aria-hidden="true"></i>${result.simName} · ${result.date}`;
+  document.getElementById('resultSub').textContent=`완료 시각: KST ${new Date().toLocaleString('ko-KR',{hour12:false}).slice(0,16)}`;
+  document.getElementById('scoreNum').textContent=result.score;
+  document.getElementById('scoreTier').textContent=result.tier;
+  document.getElementById('scoreDesc').textContent=result.tierDesc;
+  const xi=document.getElementById('xpItems');
+  result.xpGains.forEach(g=>{const c=cv(g.colorVar);xi.insertAdjacentHTML('beforeend',`<div class="xp-item"><i class="ph ${g.icon} xp-item-icon" style="color:${c}" aria-hidden="true"></i><span class="xp-item-name">${g.label}</span><span class="xp-item-val">+${g.xp} XP</span></div>`);});
+  const cs=document.getElementById('compScores');
+  result.competencies.forEach(c=>{
+    const col=cv(c.colorVar),d=c.score-c.prev;
+    cs.insertAdjacentHTML('beforeend',`<div class="comp-row"><div class="comp-name">${c.name}</div><div class="comp-track-wrap" aria-label="${c.name} 점수 ${c.score}"><div class="comp-track-fill" data-pct="${c.score}" style="width:0%;background:${col}"></div></div><div class="comp-score-val" style="color:${col}">${c.score}</div><div class="comp-delta delta-up" aria-label="이전 대비 +${d}">+${d}</div></div>`);
+  });
+  document.getElementById('feedbackText').textContent=result.feedback;
+  requestAnimationFrame(()=>{document.querySelectorAll('.comp-track-fill').forEach(el=>{el.style.width=el.dataset.pct+'%';});});
+}
+document.getElementById('btnNext').addEventListener('click',()=>{location.href='xp-bar.html?u='+uid;});
+(async()=>{
+  try{
+    const d=await(await fetch(`${BASE}/api/stats/learner/${uid}`)).json();
+    meta.keys.forEach((k,i)=>{if(d.competencies?.[k]!=null){result.competencies[i].score=Math.round(d.competencies[k]*100);result.competencies[i].prev=Math.max(result.competencies[i].score-5,0);}});
+    const latest=d.recentStatements?.find(s=>s.sim===simParam&&s.score!=null);
+    if(latest) result.score=latest.score;
+    result.tier=result.score>=85?'우수':result.score>=70?'성장 중':'개선 필요';
+  }catch(e){}
+  renderResult();
+})();
+</script>
+</body>
+</html>

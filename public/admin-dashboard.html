@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — 관리자 대시보드</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding: 0; margin: 0; display: flex; min-height: 100vh; }
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px; flex-shrink: 0;
+      background: var(--bg-card);
+      border-right: var(--border-base);
+      padding: var(--sp-lg) var(--sp-md);
+      display: flex; flex-direction: column;
+      box-shadow: var(--shadow-sm);
+    }
+    .sidebar-logo { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--accent); margin-bottom: var(--sp-xl); padding: 0 var(--sp-sm); }
+    .sidebar-logo span { color: var(--text-primary); }
+    .nav-section-label {
+      font-size: var(--fs-xs); font-weight: var(--fw-medium);
+      color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 0 var(--sp-sm); margin-bottom: 6px; margin-top: var(--sp-md);
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px var(--sp-sm);
+      border-radius: var(--radius-md);
+      font-size: var(--fs-sm); color: var(--text-secondary);
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+      text-decoration: none;
+    }
+    .nav-item:hover  { background: var(--bg-base); color: var(--text-primary); }
+    .nav-item.active { background: var(--accent-dim); color: var(--accent); font-weight: var(--fw-medium); }
+    .nav-item i { font-size: 18px; flex-shrink: 0; }
+    .sidebar-footer {
+      margin-top: auto;
+      padding: var(--sp-md) var(--sp-sm) 0;
+      border-top: var(--border-base);
+    }
+    .admin-user { display: flex; align-items: center; gap: var(--sp-sm); }
+    .admin-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent-dim); border: var(--border-accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--accent);
+    }
+    .admin-name { font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+    .admin-role { font-size: var(--fs-xs); color: var(--text-muted); }
+
+    /* ── Main Content ── */
+    .main-content { flex: 1; padding: var(--sp-xl) var(--sp-lg); overflow-y: auto; }
+    .main-header { margin-bottom: var(--sp-xl); }
+    .main-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+    .main-sub   { font-size: var(--fs-sm); color: var(--text-secondary); margin-top: 4px; }
+
+    /* ── KPI Cards ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-md); margin-bottom: var(--sp-xl); }
+    .kpi-card {
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-md) var(--sp-lg);
+      box-shadow: var(--shadow-card);
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .kpi-card:hover { border-color: var(--bc-hover); box-shadow: var(--shadow-card-hover); }
+    .kpi-label { font-size: var(--fs-xs); color: var(--text-muted); margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+    .kpi-val   { font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--text-primary); }
+    .kpi-delta { font-size: var(--fs-xs); margin-top: 4px; }
+    .delta-pos { color: var(--comp-3); }
+
+    /* ── Content Grid ── */
+    .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-md); }
+    .content-wide { grid-column: span 2; }
+    .d-card {
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-lg);
+      box-shadow: var(--shadow-card);
+    }
+    .d-card-title { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); font-weight: var(--fw-medium); margin-bottom: var(--sp-md); display: flex; align-items: center; gap: 6px; }
+
+    /* ── Cohort Table ── */
+    .cohort-table { width: 100%; border-collapse: collapse; }
+    .cohort-table th { font-size: var(--fs-xs); color: var(--text-muted); text-align: left; padding: 6px var(--sp-sm); border-bottom: var(--border-base); }
+    .cohort-table td { font-size: var(--fs-sm); padding: 10px var(--sp-sm); border-bottom: var(--border-base); }
+    .cohort-table tr:last-child td { border-bottom: none; }
+    .status-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      font-size: var(--fs-xs); font-weight: var(--fw-medium);
+    }
+    .chip-active  { background: color-mix(in srgb, var(--comp-3) 12%, transparent); color: var(--comp-3); }
+    .chip-done    { background: var(--track-bg); color: var(--text-muted); }
+    .chip-pending { background: var(--accent-dim); color: var(--accent); }
+
+    /* ── Progress Bar ── */
+    .prog-bar-sm { height: 4px; background: var(--track-bg); border-radius: var(--radius-pill); overflow: hidden; margin-top: 4px; }
+    .prog-fill-sm { height: 100%; border-radius: var(--radius-pill); }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .content-grid { grid-template-columns: 1fr; }
+      .content-wide { grid-column: span 1; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 사이드바 -->
+<nav class="sidebar" role="navigation" aria-label="관리자 메뉴">
+  <div class="sidebar-logo">AI <span>DC</span></div>
+
+  <div class="nav-section-label">관리</div>
+  <a href="#" class="nav-item active" aria-current="page">
+    <i class="ph ph-squares-four" aria-hidden="true"></i> 대시보드
+  </a>
+  <a href="#" class="nav-item">
+    <i class="ph ph-users" aria-hidden="true"></i> 코호트 관리
+  </a>
+  <a href="#" class="nav-item">
+    <i class="ph ph-play-circle" aria-hidden="true"></i> 시뮬 설정
+  </a>
+
+  <div class="nav-section-label">분석</div>
+  <a href="#" class="nav-item">
+    <i class="ph ph-chart-bar" aria-hidden="true"></i> 진행 모니터링
+  </a>
+  <a href="#" class="nav-item">
+    <i class="ph ph-chart-line-up" aria-hidden="true"></i> 데이터 분석
+  </a>
+  <a href="#" class="nav-item">
+    <i class="ph ph-file-text" aria-hidden="true"></i> 리포트
+  </a>
+
+  <div class="nav-section-label">설정</div>
+  <a href="#" class="nav-item">
+    <i class="ph ph-gear" aria-hidden="true"></i> LRS 연결
+  </a>
+
+  <div class="sidebar-footer">
+    <div class="admin-user">
+      <div class="admin-avatar" aria-hidden="true">관</div>
+      <div>
+        <div class="admin-name">L&D 관리자</div>
+        <div class="admin-role">Hunet 교육팀</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- 메인 -->
+<main class="main-content" role="main">
+  <header class="main-header">
+    <div class="main-title">관리자 대시보드</div>
+    <div class="main-sub">영업본부 팀장급 코호트 · KST 2026-05-20</div>
+  </header>
+
+  <!-- KPI -->
+  <div class="kpi-grid" role="region" aria-label="주요 지표" id="kpiGrid"></div>
+
+  <div class="content-grid">
+    <!-- 코호트 현황 -->
+    <div class="d-card content-wide" role="region" aria-label="코호트 현황">
+      <div class="d-card-title">
+        <i class="ph ph-users" aria-hidden="true"></i> 코호트 현황
+      </div>
+      <table class="cohort-table" aria-label="코호트 목록">
+        <thead>
+          <tr>
+            <th>코호트</th>
+            <th>참여인원</th>
+            <th>완료율</th>
+            <th>평균 XP</th>
+            <th>상태</th>
+          </tr>
+        </thead>
+        <tbody id="cohortTable"></tbody>
+      </table>
+    </div>
+
+    <!-- 시뮬 완료 현황 -->
+    <div class="d-card" role="region" aria-label="시뮬 완료 현황">
+      <div class="d-card-title">
+        <i class="ph ph-check-circle" aria-hidden="true"></i> 시뮬 완료 현황
+      </div>
+      <div id="simStatus"></div>
+    </div>
+
+    <!-- 역량 평균 -->
+    <div class="d-card" role="region" aria-label="12역량 평균 점수">
+      <div class="d-card-title">
+        <i class="ph ph-radar" aria-hidden="true"></i> 12역량 평균
+      </div>
+      <div id="compAvg"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const css = getComputedStyle(document.documentElement);
+const cv = k => css.getPropertyValue(k).trim();
+
+/* KPI */
+const kpis = [
+  { label: '총 학습자', icon: 'ph-users', val: '24명', delta: '+0', color: '--comp-1' },
+  { label: '이번 주 접속', icon: 'ph-calendar', val: '18명', delta: '75%', color: '--comp-3' },
+  { label: '평균 XP', icon: 'ph-chart-line-up', val: '2,847', delta: '+342', color: '--comp-7' },
+  { label: '시뮬 완료 수', icon: 'ph-check-circle', val: '147건', delta: '+23', color: '--comp-2' },
+];
+const kg = document.getElementById('kpiGrid');
+kpis.forEach(k => {
+  const c = cv(k.color);
+  kg.insertAdjacentHTML('beforeend', `
+    <div class="kpi-card">
+      <div class="kpi-label">
+        <i class="ph ${k.icon}" style="color:${c}" aria-hidden="true"></i>
+        <span>${k.label}</span>
+      </div>
+      <div class="kpi-val">${k.val}</div>
+      <div class="kpi-delta delta-pos" aria-label="증감 ${k.delta}">${k.delta}</div>
+    </div>`);
+});
+
+/* 코호트 */
+const cohorts = [
+  { name: '영업본부 팀장급 2분기', members: 24, done: 78, xp: 2847, status: 'active' },
+  { name: '전략기획팀 팀장급 1분기', members: 12, done: 100, xp: 3420, status: 'done' },
+  { name: 'HR팀 3분기', members: 8, done: 15, xp: 720, status: 'pending' },
+];
+const ct = document.getElementById('cohortTable');
+cohorts.forEach(c => {
+  const chipCls = c.status === 'active' ? 'chip-active' : c.status === 'done' ? 'chip-done' : 'chip-pending';
+  const chipTxt = c.status === 'active' ? '진행 중' : c.status === 'done' ? '완료' : '준비 중';
+  ct.insertAdjacentHTML('beforeend', `
+    <tr>
+      <td>${c.name}</td>
+      <td>${c.members}명</td>
+      <td>
+        ${c.done}%
+        <div class="prog-bar-sm"><div class="prog-fill-sm" style="width:${c.done}%;background:${cv('--comp-3')}"></div></div>
+      </td>
+      <td>${c.xp.toLocaleString()} XP</td>
+      <td><span class="status-chip ${chipCls}" aria-label="상태: ${chipTxt}">${chipTxt}</span></td>
+    </tr>`);
+});
+
+/* 시뮬 완료 현황 */
+const simData = [
+  { name: 'AI In-Basket',    done: 18, total: 24, color: '--sim-inbasket' },
+  { name: 'AI Role-Playing', done: 12, total: 24, color: '--sim-roleplay' },
+  { name: 'AI Presentation', done: 6,  total: 24, color: '--sim-pres' },
+  { name: 'AI GD',           done: 3,  total: 24, color: '--sim-gd' },
+];
+const ss = document.getElementById('simStatus');
+simData.forEach(s => {
+  const pct = Math.round(s.done / s.total * 100);
+  const c = cv(s.color);
+  ss.insertAdjacentHTML('beforeend', `
+    <div style="margin-bottom:var(--sp-md)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:var(--fs-sm)">${s.name}</span>
+        <span style="font-size:var(--fs-xs);color:var(--text-muted)">${s.done}/${s.total}명</span>
+      </div>
+      <div class="prog-bar-sm" style="height:6px" aria-label="${s.name} ${pct}% 완료">
+        <div class="prog-fill-sm" style="width:${pct}%;background:${c}"></div>
+      </div>
+    </div>`);
+});
+
+/* 역량 평균 */
+const compData = [
+  { name: '커뮤니케이션', avg: 72, colorVar: '--comp-5' },
+  { name: '코칭·육성',   avg: 68, colorVar: '--comp-7' },
+  { name: '의사결정',    avg: 65, colorVar: '--comp-2' },
+  { name: '팀 리더십',   avg: 61, colorVar: '--comp-6' },
+  { name: '실행력',      avg: 75, colorVar: '--comp-8' },
+];
+const ca = document.getElementById('compAvg');
+compData.forEach(c => {
+  const col = cv(c.colorVar);
+  ca.insertAdjacentHTML('beforeend', `
+    <div style="display:flex;align-items:center;gap:var(--sp-sm);margin-bottom:10px">
+      <span style="font-size:var(--fs-sm);flex:1">${c.name}</span>
+      <div class="prog-bar-sm" style="flex:2;height:5px" aria-label="${c.name} 평균 ${c.avg}">
+        <div class="prog-fill-sm" style="width:${c.avg}%;background:${col}"></div>
+      </div>
+      <span style="font-size:var(--fs-sm);font-weight:var(--fw-bold);min-width:28px;text-align:right;color:${col}">${c.avg}</span>
+    </div>`);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — AI In-Basket</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding: 0; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+
+    /* ── Top Bar ── */
+    .sim-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--sp-sm) var(--sp-lg);
+      background: var(--bg-card);
+      border-bottom: var(--border-base);
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+    }
+    .sim-title-wrap { display: flex; align-items: center; gap: var(--sp-sm); }
+    .sim-type-badge {
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: var(--fs-xs); font-weight: var(--fw-medium);
+      background: color-mix(in srgb, var(--sim-inbasket) 12%, transparent);
+      color: var(--sim-inbasket);
+      border: 1px solid color-mix(in srgb, var(--sim-inbasket) 30%, transparent);
+    }
+    .sim-title { font-size: var(--fs-base); font-weight: var(--fw-bold); }
+    .sim-timer {
+      display: flex; align-items: center; gap: 4px;
+      font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--accent);
+    }
+    .progress-indicator {
+      display: flex; align-items: center; gap: var(--sp-sm);
+      font-size: var(--fs-xs); color: var(--text-muted);
+    }
+
+    /* ── Main Layout ── */
+    .ib-layout {
+      display: flex; flex: 1; overflow: hidden;
+    }
+
+    /* ── Email List Panel ── */
+    .email-panel {
+      width: 300px; flex-shrink: 0;
+      border-right: var(--border-base);
+      background: var(--bg-base);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .email-panel-header {
+      padding: var(--sp-md);
+      border-bottom: var(--border-base);
+      font-size: var(--fs-xs); font-weight: var(--fw-medium);
+      text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .email-count {
+      background: var(--accent-dim); color: var(--accent);
+      border-radius: var(--radius-pill);
+      padding: 1px 8px; font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    }
+    .email-list { flex: 1; overflow-y: auto; }
+    .email-item {
+      padding: var(--sp-md);
+      border-bottom: var(--border-base);
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .email-item:hover { background: var(--bg-card); }
+    .email-item.active { background: var(--bg-card); border-left: 3px solid var(--sim-inbasket); }
+    .email-item.unread .email-from { font-weight: var(--fw-bold); }
+    .email-from { font-size: var(--fs-sm); color: var(--text-primary); margin-bottom: 2px; }
+    .email-subject { font-size: var(--fs-xs); color: var(--text-secondary); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .email-meta { display: flex; align-items: center; justify-content: space-between; }
+    .email-time { font-size: 10px; color: var(--text-muted); }
+    .priority-dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+    }
+
+    /* ── Email Content ── */
+    .email-content {
+      flex: 1; overflow-y: auto;
+      padding: var(--sp-lg);
+      background: var(--bg-card);
+    }
+    .email-content-header { margin-bottom: var(--sp-lg); padding-bottom: var(--sp-md); border-bottom: var(--border-base); }
+    .email-content-subject { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin-bottom: var(--sp-sm); }
+    .email-content-meta { font-size: var(--fs-sm); color: var(--text-secondary); }
+    .email-content-body { font-size: var(--fs-sm); color: var(--text-primary); line-height: 1.8; }
+
+    /* ── Decision Panel ── */
+    .decision-panel {
+      width: 280px; flex-shrink: 0;
+      border-left: var(--border-base);
+      background: var(--bg-base);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .decision-header {
+      padding: var(--sp-md);
+      border-bottom: var(--border-base);
+      font-size: var(--fs-xs); font-weight: var(--fw-medium);
+      text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);
+    }
+    .decision-body { flex: 1; overflow-y: auto; padding: var(--sp-md); }
+    .priority-section { margin-bottom: var(--sp-lg); }
+    .priority-label { font-size: var(--fs-sm); font-weight: var(--fw-medium); margin-bottom: var(--sp-sm); }
+    .priority-slots {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .priority-slot {
+      padding: var(--sp-sm) var(--sp-md);
+      border: 2px dashed var(--border-base);
+      border-radius: var(--radius-md);
+      font-size: var(--fs-xs); color: var(--text-muted);
+      text-align: center;
+      min-height: 40px; display: flex; align-items: center; justify-content: center;
+      transition: border-color var(--transition), background var(--transition);
+    }
+    .priority-slot.filled {
+      border-style: solid;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: var(--fs-sm);
+      border-color: var(--bc-hover);
+    }
+    .priority-slot.slot-1.filled { border-color: var(--comp-5); }
+    .priority-slot.slot-2.filled { border-color: var(--comp-1); }
+    .priority-slot.slot-3.filled { border-color: var(--comp-3); }
+
+    .action-section { margin-top: var(--sp-md); }
+    .action-btn {
+      width: 100%; padding: 10px;
+      border: var(--border-base); border-radius: var(--radius-md);
+      background: var(--bg-card); color: var(--text-secondary);
+      font-size: var(--fs-sm); cursor: pointer; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
+      transition: border-color var(--transition), color var(--transition);
+    }
+    .action-btn:hover { border-color: var(--bc-hover); color: var(--text-primary); }
+    .action-btn.primary {
+      background: var(--accent); color: var(--text-on-accent); border-color: var(--accent);
+      font-weight: var(--fw-bold);
+    }
+    .action-btn.primary:hover { opacity: 0.88; }
+
+    @media (max-width: 900px) {
+      .email-panel { width: 220px; }
+      .decision-panel { display: none; }
+    }
+    @media (max-width: 640px) {
+      .email-panel { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 상단 바 -->
+<header class="sim-topbar" role="banner">
+  <div class="sim-title-wrap">
+    <span class="sim-type-badge" aria-label="시뮬레이션 유형">AI In-Basket</span>
+    <span class="sim-title">의사결정 시뮬레이션</span>
+  </div>
+  <div class="progress-indicator" aria-label="진행 상황">
+    <i class="ph ph-envelope" aria-hidden="true"></i>
+    <span>8개 항목 · 우선순위 3개 선택</span>
+  </div>
+  <div class="sim-timer" aria-label="남은 시간">
+    <i class="ph ph-timer" aria-hidden="true"></i>
+    <span id="timer">38:24</span>
+  </div>
+</header>
+
+<!-- 메인 레이아웃 -->
+<div class="ib-layout" role="main">
+
+  <!-- 이메일 목록 -->
+  <nav class="email-panel" aria-label="이메일 목록">
+    <div class="email-panel-header">
+      받은 메일함
+      <span class="email-count" aria-label="8개 이메일">8</span>
+    </div>
+    <div class="email-list" role="list" id="emailList"></div>
+  </nav>
+
+  <!-- 이메일 본문 -->
+  <article class="email-content" aria-label="이메일 내용" id="emailContent">
+    <div class="email-content-header">
+      <div class="email-content-subject" id="contentSubject">A팀 Q2 목표 달성 위기 — 즉각 조치 요청</div>
+      <div class="email-content-meta" id="contentMeta">보낸 사람: 박민준 팀원 · 오전 9:15</div>
+    </div>
+    <div class="email-content-body" id="contentBody">
+      팀장님,<br><br>
+      안녕하세요. 현재 A팀의 Q2 목표 달성이 위험한 상황입니다. 이번 주 수요일까지 계획 대비 35% 미달 상태이며,
+      주요 고객사 3곳과의 미팅이 연이어 취소되었습니다. 빠른 시일 내 팀 전략 회의 개최 및
+      긴급 고객 방문 일정이 필요합니다.<br><br>
+      팀장님의 신속한 판단을 부탁드립니다.
+    </div>
+  </article>
+
+  <!-- 의사결정 패널 -->
+  <aside class="decision-panel" aria-label="의사결정 영역">
+    <div class="decision-header">우선순위 선택</div>
+    <div class="decision-body">
+      <div class="priority-section">
+        <div class="priority-label">상위 3개 우선순위</div>
+        <div class="priority-slots" role="list" aria-label="우선순위 슬롯">
+          <div class="priority-slot slot-1 filled" role="listitem" aria-label="1순위">1순위: A팀 Q2 목표 위기</div>
+          <div class="priority-slot slot-2" role="listitem" aria-label="2순위 비어있음">2순위 선택...</div>
+          <div class="priority-slot slot-3" role="listitem" aria-label="3순위 비어있음">3순위 선택...</div>
+        </div>
+      </div>
+      <div class="action-section">
+        <div style="font-size:var(--fs-xs);font-weight:var(--fw-medium);color:var(--text-muted);margin-bottom:var(--sp-sm);text-transform:uppercase;letter-spacing:0.08em">즉각 조치</div>
+        <button class="action-btn" aria-label="전략 회의 소집">
+          <i class="ph ph-users" aria-hidden="true"></i> 전략 회의 소집
+        </button>
+        <button class="action-btn" aria-label="보고서 요청">
+          <i class="ph ph-file-text" aria-hidden="true"></i> 현황 보고서 요청
+        </button>
+        <button class="action-btn" aria-label="위임">
+          <i class="ph ph-arrow-bend-right-up" aria-hidden="true"></i> 위임
+        </button>
+        <button class="action-btn" aria-label="보류">
+          <i class="ph ph-clock" aria-hidden="true"></i> 보류
+        </button>
+      </div>
+      <div style="margin-top:var(--sp-lg)">
+        <button class="action-btn primary" id="submitBtn" aria-label="결정 완료">
+          <i class="ph ph-check" aria-hidden="true"></i> 결정 완료
+        </button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const emails = [
+  { from:'박민준 팀원', subject:'A팀 Q2 목표 달성 위기 — 즉각 조치 요청', time:'09:15', priority:'high', unread:true, active:true },
+  { from:'이소연 인사팀', subject:'신규 채용 최종 면접 일정 확정 요청', time:'09:02', priority:'medium', unread:true, active:false },
+  { from:'김태훈 부장', subject:'3분기 예산 배분 초안 검토 부탁', time:'08:55', priority:'medium', unread:false, active:false },
+  { from:'최지원 고객', subject:'[긴급] 계약 조건 재협의 필요', time:'08:30', priority:'high', unread:true, active:false },
+  { from:'박정우 팀원', subject:'주간 업무 보고 — 5월 3주차', time:'08:15', priority:'low', unread:false, active:false },
+  { from:'시스템 알림', subject:'팀 성과 대시보드 업데이트 완료', time:'07:50', priority:'low', unread:false, active:false },
+  { from:'강수민 협력사', subject:'공동 프로젝트 일정 조율 요청', time:'07:30', priority:'medium', unread:true, active:false },
+  { from:'이영훈 이사', subject:'임원 보고 자료 제출 기한 안내', time:'07:00', priority:'high', unread:false, active:false },
+];
+
+const css = getComputedStyle(document.documentElement);
+const priorityColors = { high: css.getPropertyValue('--comp-5').trim(), medium: css.getPropertyValue('--comp-1').trim(), low: css.getPropertyValue('--comp-3').trim() };
+const priorityLabels = { high: '긴급', medium: '중요', low: '일반' };
+
+const list = document.getElementById('emailList');
+emails.forEach((e, i) => {
+  list.insertAdjacentHTML('beforeend', `
+    <div class="email-item${e.unread ? ' unread' : ''}${e.active ? ' active' : ''}" role="listitem" tabindex="0" aria-label="${e.from}: ${e.subject}">
+      <div class="email-from">${e.from}</div>
+      <div class="email-subject">${e.subject}</div>
+      <div class="email-meta">
+        <span class="email-time">${e.time}</span>
+        <div class="priority-dot" style="background:${priorityColors[e.priority]}" aria-label="우선도: ${priorityLabels[e.priority]}"></div>
+      </div>
+    </div>`);
+});
+
+/* 타이머 */
+let sec = 38 * 60 + 24;
+const timerEl = document.getElementById('timer');
+const t = setInterval(() => {
+  if (sec <= 0) { clearInterval(t); return; }
+  sec--;
+  const m = String(Math.floor(sec / 60)).padStart(2,'0');
+  const s = String(sec % 60).padStart(2,'0');
+  timerEl.textContent = `${m}:${s}`;
+}, 1000);
+
+document.getElementById('submitBtn').addEventListener('click', () => { location.href = 'result.html'; });
+</script>
+</body>
+</html>

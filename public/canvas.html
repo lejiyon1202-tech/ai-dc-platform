@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — AI Presentation</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding: 0; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+
+    .sim-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--sp-sm) var(--sp-lg);
+      background: var(--bg-card);
+      border-bottom: var(--border-base);
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+    }
+    .sim-title-wrap { display: flex; align-items: center; gap: var(--sp-sm); }
+    .sim-type-badge {
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: var(--fs-xs); font-weight: var(--fw-medium);
+      background: color-mix(in srgb, var(--sim-pres) 12%, transparent);
+      color: var(--sim-pres);
+      border: 1px solid color-mix(in srgb, var(--sim-pres) 30%, transparent);
+    }
+    .sim-title { font-size: var(--fs-base); font-weight: var(--fw-bold); }
+    .progress-chips { display: flex; gap: 4px; }
+    .progress-chip {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--track-bg); border: var(--border-base);
+    }
+    .progress-chip.done  { background: var(--comp-3); border-color: var(--comp-3); }
+    .progress-chip.current { background: var(--sim-pres); border-color: var(--sim-pres); }
+
+    /* ── Main Layout ── */
+    .canvas-layout { flex: 1; display: flex; overflow: hidden; }
+
+    /* ── Slide Panel ── */
+    .slide-panel {
+      flex: 1; display: flex; flex-direction: column;
+      background: var(--bg-base); border-right: var(--border-base);
+      overflow: hidden;
+    }
+    .slide-main {
+      flex: 1; padding: var(--sp-lg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .slide-canvas {
+      width: 100%; max-width: 560px; aspect-ratio: 16/9;
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      padding: var(--sp-xl);
+      display: flex; flex-direction: column; justify-content: space-between;
+      position: relative; overflow: hidden;
+    }
+    .slide-canvas::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--sim-pres), var(--accent));
+    }
+    .slide-num {
+      font-size: var(--fs-xs); color: var(--text-muted);
+      text-align: right; margin-bottom: var(--sp-sm);
+    }
+    .slide-title { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin-bottom: var(--sp-sm); }
+    .slide-content { font-size: var(--fs-sm); color: var(--text-secondary); line-height: 1.7; flex: 1; }
+    .slide-keywords { display: flex; gap: 6px; flex-wrap: wrap; margin-top: var(--sp-md); }
+    .slide-kw {
+      padding: 3px 10px; border-radius: var(--radius-pill);
+      font-size: var(--fs-xs);
+      background: color-mix(in srgb, var(--sim-pres) 10%, transparent);
+      color: var(--sim-pres);
+    }
+
+    .slide-nav {
+      padding: var(--sp-sm) var(--sp-lg);
+      border-top: var(--border-base);
+      display: flex; gap: 8px; overflow-x: auto;
+    }
+    .slide-thumb {
+      flex-shrink: 0;
+      width: 80px; height: 50px;
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 10px; color: var(--text-muted);
+      cursor: pointer;
+      transition: border-color var(--transition);
+      padding: 4px;
+    }
+    .slide-thumb.active { border-color: var(--sim-pres); color: var(--sim-pres); }
+    .slide-thumb.done-thumb { border-color: var(--comp-3); }
+    .thumb-title { font-size: 8px; line-height: 1.2; text-align: center; }
+
+    /* ── Right Panel ── */
+    .right-panel {
+      width: 320px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      background: var(--bg-base);
+      overflow: hidden;
+    }
+
+    .audience-panel {
+      flex: 1; overflow-y: auto;
+      padding: var(--sp-md);
+      border-bottom: var(--border-base);
+    }
+    .panel-label {
+      font-size: var(--fs-xs); font-weight: var(--fw-medium);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-muted); margin-bottom: var(--sp-sm);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .audience-reaction {
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-md);
+      padding: var(--sp-sm) var(--sp-md);
+      margin-bottom: 8px;
+      font-size: var(--fs-xs);
+      box-shadow: var(--shadow-sm);
+    }
+    .reaction-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .reaction-name { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--text-secondary); }
+    .reaction-score { font-size: var(--fs-xs); color: var(--sim-pres); font-weight: var(--fw-bold); }
+    .reaction-text { color: var(--text-secondary); line-height: 1.5; }
+
+    .score-panel { padding: var(--sp-md); }
+    .score-item {
+      display: flex; align-items: center; gap: var(--sp-sm);
+      margin-bottom: 8px;
+    }
+    .score-label { font-size: var(--fs-xs); flex: 1; }
+    .score-bar-wrap { width: 80px; height: 4px; background: var(--track-bg); border-radius: var(--radius-pill); overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: var(--radius-pill); transition: width 0.6s var(--ease-out); }
+    .score-val { font-size: var(--fs-xs); font-weight: var(--fw-bold); min-width: 24px; text-align: right; }
+
+    /* ── Input Area ── */
+    .input-area {
+      padding: var(--sp-md) var(--sp-lg);
+      background: var(--bg-card);
+      border-top: var(--border-base);
+      flex-shrink: 0;
+    }
+    .input-hint { font-size: var(--fs-xs); color: var(--text-muted); margin-bottom: var(--sp-sm); display: flex; align-items: center; gap: 4px; }
+    .input-row { display: flex; gap: var(--sp-sm); }
+    .pres-input {
+      flex: 1; padding: 10px 14px;
+      border: var(--border-base); border-radius: var(--radius-md);
+      background: var(--bg-base); color: var(--text-primary);
+      font-size: var(--fs-sm); font-family: var(--font-base);
+    }
+    .pres-input:focus { outline: none; border-color: var(--accent-border); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .next-btn {
+      padding: 10px 18px;
+      background: var(--sim-pres); color: var(--text-on-accent);
+      border: none; border-radius: var(--radius-md);
+      font-size: var(--fs-sm); font-weight: var(--fw-bold);
+      cursor: pointer; transition: opacity var(--transition);
+      display: flex; align-items: center; gap: 4px; white-space: nowrap;
+    }
+    .next-btn:hover { opacity: 0.88; }
+
+    @media (max-width: 860px) { .right-panel { display: none; } }
+  </style>
+</head>
+<body>
+
+<header class="sim-topbar" role="banner">
+  <div class="sim-title-wrap">
+    <span class="sim-type-badge" aria-label="시뮬레이션 유형">AI Presentation</span>
+    <span class="sim-title">AI Canvas — 논리·설득력 발표</span>
+  </div>
+  <div class="progress-chips" role="region" aria-label="슬라이드 진행">
+    <div class="progress-chip done" aria-label="슬라이드 1 완료"></div>
+    <div class="progress-chip done" aria-label="슬라이드 2 완료"></div>
+    <div class="progress-chip current" aria-label="슬라이드 3 현재"></div>
+    <div class="progress-chip" aria-label="슬라이드 4 미완"></div>
+    <div class="progress-chip" aria-label="슬라이드 5 미완"></div>
+  </div>
+  <div style="font-size:var(--fs-xs);color:var(--text-muted)">KST 2026-05-20</div>
+</header>
+
+<div class="canvas-layout" role="main">
+  <!-- 슬라이드 영역 -->
+  <section class="slide-panel" aria-label="슬라이드 발표 영역">
+    <div class="slide-main">
+      <div class="slide-canvas" role="img" aria-label="현재 슬라이드: AI DC 도입 효과">
+        <div class="slide-num" aria-hidden="true">3 / 5</div>
+        <div class="slide-title">AI DC 도입 시 기대 효과</div>
+        <div class="slide-content">
+          12역량 기반 개발 프로그램을 AI 시뮬레이션과 연계하면 기존 집합교육 대비
+          학습 전이율(L3)이 2.3배 향상됩니다. Phillips ROI 분석 결과
+          투자 대비 340% 이상의 성과를 19개 한국 기업 사례에서 실증하였습니다.
+        </div>
+        <div class="slide-keywords">
+          <span class="slide-kw">학습 전이율 2.3배</span>
+          <span class="slide-kw">Phillips ROI 340%</span>
+          <span class="slide-kw">19개 기업 실증</span>
+        </div>
+      </div>
+    </div>
+    <div class="slide-nav" role="list" aria-label="슬라이드 목록" id="slideNav"></div>
+  </section>
+
+  <!-- 우측 패널 -->
+  <aside class="right-panel" aria-label="청중 반응 및 점수">
+    <div class="audience-panel">
+      <div class="panel-label">
+        <i class="ph ph-users" aria-hidden="true"></i> AI 청중 반응
+      </div>
+      <div id="reactions"></div>
+    </div>
+    <div class="score-panel">
+      <div class="panel-label">
+        <i class="ph ph-chart-bar" aria-hidden="true"></i> 실시간 점수
+      </div>
+      <div id="scores"></div>
+    </div>
+  </aside>
+</div>
+
+<footer class="input-area">
+  <div class="input-hint">
+    <i class="ph ph-microphone" aria-hidden="true"></i>
+    슬라이드 내용을 발표하세요 — 논리적 근거와 구체적 수치를 포함하면 점수가 올라갑니다
+  </div>
+  <div class="input-row">
+    <input type="text" id="presInput" class="pres-input" placeholder="발표 내용을 입력하세요..." aria-label="발표 내용 입력" aria-required="true" />
+    <button class="next-btn" id="nextBtn" aria-label="다음 슬라이드로 이동">
+      <i class="ph ph-arrow-right" aria-hidden="true"></i> 다음
+    </button>
+  </div>
+</footer>
+
+<script>
+const slides = [
+  { title: '현황 및 문제 정의', done: true },
+  { title: 'AI DC 솔루션 개요', done: true },
+  { title: 'AI DC 도입 효과', current: true },
+  { title: '실행 계획 및 일정' },
+  { title: '투자 대비 기대 성과' },
+];
+const nav = document.getElementById('slideNav');
+slides.forEach(s => {
+  nav.insertAdjacentHTML('beforeend', `
+    <div class="slide-thumb${s.current ? ' active' : ''}${s.done ? ' done-thumb' : ''}" role="listitem" tabindex="0" aria-label="${s.title}${s.current ? ' (현재)' : ''}${s.done ? ' (완료)' : ''}">
+      <div class="thumb-title">${s.title}</div>
+    </div>`);
+});
+
+const css = getComputedStyle(document.documentElement);
+const reactions = [
+  { name: 'AI 청중 1', score: 82, text: '구체적인 수치가 설득력을 높이고 있습니다. ROI 데이터 출처가 있으면 더 좋겠습니다.' },
+  { name: 'AI 청중 2', score: 75, text: '19개 기업 사례가 인상적입니다. 우리 업종 관련 사례가 있나요?' },
+];
+const rEl = document.getElementById('reactions');
+reactions.forEach(r => {
+  rEl.insertAdjacentHTML('beforeend', `
+    <div class="audience-reaction" role="article" aria-label="${r.name} 반응">
+      <div class="reaction-header">
+        <span class="reaction-name">${r.name}</span>
+        <span class="reaction-score" aria-label="점수 ${r.score}">${r.score}점</span>
+      </div>
+      <div class="reaction-text">${r.text}</div>
+    </div>`);
+});
+
+const scores = [
+  { label:'논리 일관성', val: 78, color: css.getPropertyValue('--comp-1').trim() },
+  { label:'설득력',      val: 72, color: css.getPropertyValue('--sim-pres').trim() },
+  { label:'청중 반응',   val: 80, color: css.getPropertyValue('--comp-3').trim() },
+];
+const sEl = document.getElementById('scores');
+scores.forEach(s => {
+  sEl.insertAdjacentHTML('beforeend', `
+    <div class="score-item">
+      <span class="score-label">${s.label}</span>
+      <div class="score-bar-wrap" aria-label="${s.label} ${s.val}점">
+        <div class="score-bar-fill" style="width:${s.val}%;background:${s.color}"></div>
+      </div>
+      <span class="score-val" style="color:${s.color}">${s.val}</span>
+    </div>`);
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  document.getElementById('presInput').value = '';
+});
+</script>
+</body>
+</html>

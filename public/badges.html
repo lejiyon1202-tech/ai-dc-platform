@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — 역량 뱃지</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <style>
+    body { padding: var(--sp-xl) var(--sp-lg); max-width: 900px; margin: 0 auto; }
+
+    /* ── Page Header ── */
+    .page-header { margin-bottom: var(--sp-xl); }
+    .page-title  { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+    .page-sub    { font-size: var(--fs-sm); color: var(--text-secondary); margin-top: 4px; }
+    .badge-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--radius-pill);
+      background: var(--accent-dim);
+      border: var(--border-accent);
+      font-size: var(--fs-xs);
+      font-weight: var(--fw-medium);
+      color: var(--accent);
+      margin-top: var(--sp-sm);
+    }
+
+    /* ── Sim Badges (Special) ── */
+    .sim-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--sp-md);
+      margin-bottom: var(--sp-xl);
+    }
+    .sim-badge {
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-md);
+      padding: var(--sp-lg) var(--sp-md);
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      cursor: default;
+    }
+    .sim-badge:not(.locked):hover {
+      border-color: var(--bc-hover);
+      box-shadow: var(--shadow-card-hover);
+    }
+    .sim-badge.earned {
+      border-color: var(--accent-border);
+      box-shadow: var(--shadow-glow);
+    }
+    .sim-badge.locked { opacity: 0.4; }
+    .sim-icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      margin: 0 auto var(--sp-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    .sim-name { font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+    .sim-sub  { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Competency Badges Grid ── */
+    .comp-badge-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--sp-md);
+    }
+    .comp-badge {
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-md);
+      padding: var(--sp-md);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-md);
+      box-shadow: var(--shadow-sm);
+      transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+    }
+    .comp-badge.active {
+      border-color: var(--bc-hover);
+      background: var(--bg-card-hover);
+    }
+    .comp-badge.active:hover {
+      border-color: var(--bc-strong);
+      box-shadow: var(--shadow-card-hover);
+    }
+    .comp-badge.locked { opacity: 0.45; }
+    .comp-badge-icon {
+      width: 40px; height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .comp-badge-info { flex: 1; min-width: 0; }
+    .comp-badge-name { font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+    .comp-badge-tier {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      font-size: 10px;
+      font-weight: var(--fw-medium);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+    .tier-master  { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+    .tier-adv     { background: color-mix(in srgb, var(--comp-1) 15%, transparent); color: var(--comp-1); }
+    .tier-mid     { background: color-mix(in srgb, var(--comp-3) 12%, transparent); color: var(--comp-3); }
+    .tier-basic   { background: var(--track-bg); color: var(--text-secondary); }
+    .tier-locked  { background: var(--overlay-xs); color: var(--text-muted); }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .sim-grid { grid-template-columns: repeat(2, 1fr); }
+      .comp-badge-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-title">역량 뱃지</div>
+  <div class="page-sub">시뮬레이션 성취 + 12역량 개발 단계별 인증</div>
+  <div class="badge-count">● 획득 8 / 16</div>
+</div>
+
+<div class="section-title">시뮬레이션 완료 뱃지</div>
+<div class="sim-grid" id="simGrid"></div>
+
+<div class="section-title">12역량 개발 뱃지</div>
+<div class="comp-badge-grid" id="compBadgeGrid"></div>
+
+<script>
+const BASE='https://sbi.3.39.80.158.nip.io';
+const uid=new URLSearchParams(location.search).get('u')||'learner-demo';
+const KEYS=['strategic_thinking','decision_making','organizational_influence','conflict_resolution','communication','collaboration','coaching','execution','problem_solving','change_leadership','results_orientation','self_awareness'];
+const simBadges=[
+  {name:'AI In-Basket',sub:'의사결정 완료',color:'var(--sim-inbasket)',icon:'IB',earned:false,id:'inbasket'},
+  {name:'AI Role-Playing',sub:'코칭 시뮬레이션 완료',color:'var(--sim-roleplay)',icon:'RP',earned:false,id:'roleplay'},
+  {name:'AI Presentation',sub:'발표 평가 완료',color:'var(--sim-pres)',icon:'PRES',earned:false,id:'canvas'},
+  {name:'AI GD',sub:'그룹토론 완료',color:'var(--sim-gd)',icon:'GD',earned:false,id:'gd'},
+];
+const TIERS=[{key:'master',label:'마스터',cls:'tier-master',threshold:0.95},{key:'adv',label:'고급',cls:'tier-adv',threshold:0.75},{key:'mid',label:'중급',cls:'tier-mid',threshold:0.50},{key:'basic',label:'기초',cls:'tier-basic',threshold:0.25},{key:'locked',label:'미획득',cls:'tier-locked',threshold:0}];
+const compBadges=[
+  {name:'전략적 사고',xp:310,max:400,color:'var(--comp-1)',icon:'01'},
+  {name:'의사결정',xp:280,max:400,color:'var(--comp-2)',icon:'02'},
+  {name:'영향력 행사',xp:350,max:400,color:'var(--comp-3)',icon:'03'},
+  {name:'갈등 해결',xp:190,max:400,color:'var(--comp-4)',icon:'04'},
+  {name:'커뮤니케이션',xp:420,max:400,color:'var(--comp-5)',icon:'05'},
+  {name:'팀 리더십',xp:260,max:400,color:'var(--comp-6)',icon:'06'},
+  {name:'코칭·육성',xp:300,max:400,color:'var(--comp-7)',icon:'07'},
+  {name:'실행력',xp:380,max:400,color:'var(--comp-8)',icon:'08'},
+  {name:'혁신·창의',xp:140,max:400,color:'var(--comp-9)',icon:'09'},
+  {name:'조직이해',xp:220,max:400,color:'var(--comp-10)',icon:'10'},
+  {name:'고객지향',xp:290,max:400,color:'var(--comp-11)',icon:'11'},
+  {name:'자기개발',xp:100,max:400,color:'var(--comp-12)',icon:'12'},
+];
+function getTier(xp,max){const r=xp/max;return TIERS.find(t=>r>=t.threshold)||TIERS[TIERS.length-1];}
+function renderBadges(){
+  const sg=document.getElementById('simGrid');
+  simBadges.forEach(b=>{sg.insertAdjacentHTML('beforeend',`<div class="sim-badge ${b.earned?'earned':'locked'}"><div class="sim-icon" style="background:${b.color}20" aria-hidden="true">${b.icon}</div><div class="sim-name">${b.name}</div><div class="sim-sub">${b.earned?b.sub:'미완료'}</div></div>`);});
+  const cg=document.getElementById('compBadgeGrid');
+  compBadges.forEach(b=>{const tier=getTier(b.xp,b.max);const u=tier.key!=='locked';cg.insertAdjacentHTML('beforeend',`<div class="comp-badge ${u?'active':'locked'}"><div class="comp-badge-icon" style="background:${b.color}22" aria-hidden="true">${b.icon}</div><div class="comp-badge-info"><div class="comp-badge-name">${b.name}</div><span class="comp-badge-tier ${tier.cls}">${tier.label}</span></div></div>`);});
+  const earned=simBadges.filter(b=>b.earned).length+compBadges.filter(b=>getTier(b.xp,b.max).key!=='locked').length;
+  document.querySelector('.badge-count').textContent=`● 획득 ${earned} / ${simBadges.length+compBadges.length}`;
+}
+(async()=>{
+  try{
+    const d=await(await fetch(`${BASE}/api/stats/learner/${uid}`)).json();
+    if(d.completedSimulations?.length) simBadges.forEach(b=>{if(d.completedSimulations.includes(b.id))b.earned=true;});
+    KEYS.forEach((k,i)=>{if(d.competencies?.[k]!=null)compBadges[i].xp=Math.round(d.competencies[k]*400);});
+  }catch(e){}
+  renderBadges();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — 주간 챌린지</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <style>
+    body { padding: var(--sp-xl) var(--sp-lg); max-width: 800px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .ch-header { margin-bottom: var(--sp-xl); }
+    .ch-title  { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+    .ch-sub    { font-size: var(--fs-sm); color: var(--text-secondary); margin-top: 4px; }
+
+    /* ── Week Progress ── */
+    .week-card {
+      background: var(--bg-card);
+      border: var(--border-accent);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-lg) var(--sp-xl);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-xl);
+      margin-bottom: var(--sp-xl);
+      box-shadow: var(--shadow-glow);
+    }
+    .week-label {
+      font-size: var(--fs-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .week-range { font-size: var(--fs-md); font-weight: var(--fw-bold); }
+    .week-days  {
+      display: flex;
+      gap: 6px;
+      margin-left: auto;
+    }
+    .day-dot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--fs-xs);
+      font-weight: var(--fw-medium);
+    }
+    .day-dot.done { background: var(--accent); color: var(--bg-base); }
+    .day-dot.today { border: 2px solid var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .day-dot.future { background: var(--track-bg); color: var(--text-muted); }
+
+    /* ── Challenge Cards ── */
+    .ch-grid { display: flex; flex-direction: column; gap: var(--sp-md); }
+    .ch-card {
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-md);
+      padding: var(--sp-lg);
+      box-shadow: var(--shadow-sm);
+      transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+    }
+    .ch-card.active {
+      border-color: var(--bc-hover);
+      background: var(--bg-card-hover);
+      box-shadow: var(--shadow-card-hover);
+    }
+    .ch-card.completed {
+      border-color: var(--accent-border);
+      box-shadow: 0 2px 12px rgba(184,146,58,0.12);
+    }
+    .ch-card.locked  { opacity: 0.45; }
+
+    .ch-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--sp-md);
+      margin-bottom: var(--sp-sm);
+    }
+    .ch-name   { font-size: var(--fs-base); font-weight: var(--fw-bold); }
+    .ch-desc   { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--sp-md); }
+    .ch-meta   {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-md);
+    }
+    .ch-sim-tag {
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      font-size: var(--fs-xs);
+      font-weight: var(--fw-medium);
+    }
+    .ch-xp {
+      font-size: var(--fs-sm);
+      font-weight: var(--fw-bold);
+      color: var(--accent);
+      margin-left: auto;
+    }
+    .ch-progress-wrap { margin-top: var(--sp-sm); }
+    .ch-progress-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .ch-progress-label { font-size: var(--fs-xs); color: var(--text-muted); }
+    .ch-progress-val   { font-size: var(--fs-xs); color: var(--text-secondary); }
+    .ch-track {
+      height: 5px;
+      background: var(--track-bg);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+    }
+    .ch-fill {
+      height: 100%;
+      border-radius: var(--radius-pill);
+      transition: width 0.8s var(--ease-out);
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 560px) {
+      .week-card { flex-direction: column; align-items: flex-start; gap: var(--sp-md); }
+      .week-days { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="ch-header">
+  <div class="ch-title">주간 챌린지</div>
+  <div class="ch-sub">역량 발현 행동 목표 — 이번 주 달성하면 보너스 XP</div>
+</div>
+
+<div class="week-card">
+  <div>
+    <div class="week-label">현재 주차</div>
+    <div class="week-range">2026년 5월 3주차</div>
+  </div>
+  <div class="week-days" id="weekDays"></div>
+</div>
+
+<div class="section-title">이번 주 챌린지 (3/5)</div>
+<div class="ch-grid" id="chGrid"></div>
+
+<script>
+const BASE='https://sbi.3.39.80.158.nip.io';
+const uid=new URLSearchParams(location.search).get('u')||'learner-demo';
+[{label:'월',state:'done'},{label:'화',state:'done'},{label:'수',state:'today'},{label:'목',state:'future'},{label:'금',state:'future'}].forEach(d=>{
+  document.getElementById('weekDays').insertAdjacentHTML('beforeend',`<div class="day-dot ${d.state}" aria-label="${d.label}요일 ${d.state==='done'?'완료':d.state==='today'?'오늘':'예정'}">${d.label}</div>`);
+});
+let challenges=[
+  {name:'코칭 트레이너 시뮬 2회 연속 완료',desc:'Impact 비율 0.6 이상 2회 달성. 감정 단계 최소 "저항"까지 진행.',sim:'AI Role-Playing',simColor:'var(--comp-3)',progress:2,target:2,xp:100,state:'completed'},
+  {name:'In-Basket 의사결정 정확도 80%+',desc:'우선순위 상위 3건을 정확히 선별. 전략적 근거 2가지 이상 명시.',sim:'AI In-Basket',simColor:'var(--comp-1)',progress:1,target:1,xp:80,state:'completed'},
+  {name:'GD 발언 리드 3회',desc:'논의를 방향 전환시키는 발언 3회. 타 참여자 의견에 기반한 확장 발언 포함.',sim:'AI GD',simColor:'var(--comp-4)',progress:1,target:3,xp:120,state:'active'},
+  {name:'AI Presentation 발표 논리성 점수 85+',desc:'슬라이드 흐름 논리 일관성 + 청중 질문 대응 점수 합산.',sim:'AI Presentation',simColor:'var(--comp-2)',progress:0,target:1,xp:90,state:'active'},
+  {name:'전체 시뮬 연속 7일 접속',desc:'7일 연속 최소 1개 시뮬레이션 세션 시작.',sim:'전체',simColor:'var(--accent)',progress:3,target:7,xp:200,state:'locked'},
+];
+function renderChallenges(){
+  const cg=document.getElementById('chGrid'); cg.innerHTML='';
+  challenges.forEach(c=>{
+    const pct=Math.round(c.progress/c.target*100);
+    const sc=c.state==='completed'?'var(--comp-3)':c.state==='active'?'var(--accent)':'var(--text-muted)';
+    cg.insertAdjacentHTML('beforeend',`<div class="ch-card ${c.state}"><div class="ch-top"><div><div class="ch-name">${c.name}</div><div class="ch-desc">${c.desc}</div></div><div class="status-dot" style="background:${sc}" aria-hidden="true"></div></div><div class="ch-meta"><span class="ch-sim-tag badge-pill" style="background:${c.simColor}18;color:${c.simColor}">${c.sim}</span><span class="ch-xp">+${c.xp} XP</span></div><div class="ch-progress-wrap"><div class="ch-progress-row"><span class="ch-progress-label">진행</span><span class="ch-progress-val">${c.progress} / ${c.target}</span></div><div class="ch-track"><div class="ch-fill" style="width:${pct}%;background:${sc}"></div></div></div></div>`);
+  });
+}
+(async()=>{
+  try{
+    const d=await(await fetch(`${BASE}/api/stats/learner/${uid}`)).json();
+    if(d.completedSimulations?.length){
+      const m={roleplay:0,inbasket:1,gd:2};
+      d.completedSimulations.forEach(s=>{if(m[s]!=null){challenges[m[s]].progress=challenges[m[s]].target;challenges[m[s]].state='completed';}});
+    }
+    if(d.statementsTotal) challenges[4].progress=Math.min(d.statementsTotal,7);
+  }catch(e){}
+  renderChallenges();
+})();
+</script>
+</body>
+</html>

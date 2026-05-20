@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — AI 시뮬레이션</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding: var(--sp-xl) var(--sp-lg); max-width: 960px; margin: 0 auto; }
+
+    /* ── Page Header ── */
+    .page-header { margin-bottom: var(--sp-xl); }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: var(--fs-sm); color: var(--text-muted);
+      text-decoration: none;
+      margin-bottom: var(--sp-md);
+      transition: color var(--transition);
+    }
+    .back-link:hover { color: var(--accent); }
+    .page-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+    .page-sub   { font-size: var(--fs-sm); color: var(--text-secondary); margin-top: 4px; }
+
+    /* ── Filter Tabs ── */
+    .filter-tabs {
+      display: flex; gap: 8px;
+      margin-bottom: var(--sp-xl);
+      flex-wrap: wrap;
+    }
+    .filter-tab {
+      padding: 6px 16px;
+      border-radius: var(--radius-pill);
+      font-size: var(--fs-xs);
+      font-weight: var(--fw-medium);
+      border: var(--border-base);
+      background: var(--bg-card);
+      color: var(--text-muted);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+    }
+    .filter-tab.active {
+      background: var(--accent-dim);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    /* ── Sim Grid ── */
+    .sim-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--sp-lg);
+    }
+    .sim-card {
+      background: var(--bg-card);
+      border: var(--border-base);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-xl) var(--sp-lg);
+      box-shadow: var(--shadow-card);
+      transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .sim-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at top right, var(--sim-bg, transparent) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .sim-card:hover {
+      border-color: var(--bc-hover);
+      box-shadow: var(--shadow-card-hover);
+      transform: translateY(-3px);
+    }
+    .sim-card-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: var(--sp-md);
+    }
+    .sim-card-icon {
+      width: 56px; height: 56px;
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+    .sim-badge-status {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: var(--fs-xs);
+      font-weight: var(--fw-medium);
+    }
+    .status-available { background: var(--accent-dim); color: var(--accent); border: var(--border-accent); }
+    .status-done      { background: color-mix(in srgb, var(--comp-3) 12%, transparent); color: var(--comp-3); }
+    .status-locked    { background: var(--track-bg); color: var(--text-muted); }
+
+    .sim-card-title { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin-bottom: 6px; }
+    .sim-card-desc  { font-size: var(--fs-sm); color: var(--text-secondary); line-height: 1.6; margin-bottom: var(--sp-md); }
+
+    .comp-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: var(--sp-md); }
+    .comp-tag {
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: var(--fs-xs);
+      font-weight: var(--fw-medium);
+    }
+
+    .sim-card-meta {
+      display: flex; align-items: center; gap: var(--sp-md);
+      padding-top: var(--sp-md);
+      border-top: var(--border-base);
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+    .sim-meta-item { display: flex; align-items: center; gap: 4px; }
+
+    .sim-card-cta {
+      display: block;
+      width: 100%;
+      margin-top: var(--sp-md);
+      padding: 12px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--fs-sm);
+      font-weight: var(--fw-bold);
+      cursor: pointer;
+      transition: opacity var(--transition);
+    }
+    .cta-start    { background: var(--accent); color: var(--text-on-accent); }
+    .cta-start:hover { opacity: 0.88; }
+    .cta-retry    { background: var(--accent-dim); color: var(--accent); border: var(--border-accent); }
+    .cta-locked   { background: var(--track-bg); color: var(--text-muted); cursor: not-allowed; }
+
+    /* ── My Progress ── */
+    .progress-bar-wrap { height: 4px; background: var(--track-bg); border-radius: var(--radius-pill); margin-top: var(--sp-sm); overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: var(--radius-pill); transition: width 0.6s var(--ease-out); }
+
+    @media (max-width: 640px) {
+      .sim-grid { grid-template-columns: 1fr; }
+      .filter-tabs { gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="dashboard.html" class="back-link" aria-label="대시보드로 돌아가기">
+    <i class="ph ph-arrow-left" aria-hidden="true"></i> 대시보드
+  </a>
+  <div class="page-title">AI 시뮬레이션</div>
+  <div class="page-sub">실전과 같은 상황에서 12역량을 개발하세요</div>
+</div>
+
+<div class="filter-tabs" role="tablist" aria-label="시뮬 필터">
+  <button class="filter-tab active" role="tab" aria-selected="true">전체</button>
+  <button class="filter-tab" role="tab" aria-selected="false">미완료</button>
+  <button class="filter-tab" role="tab" aria-selected="false">완료</button>
+  <button class="filter-tab" role="tab" aria-selected="false">추천</button>
+</div>
+
+<div class="sim-grid" id="simGrid" role="list"></div>
+
+<script>
+const css = getComputedStyle(document.documentElement);
+const cv = k => css.getPropertyValue(k).trim();
+
+const sims = [
+  {
+    key: 'inbasket',
+    title: 'AI In-Basket',
+    desc: '실제 업무 이메일과 보고서를 분석하고 의사결정 우선순위를 결정하는 시뮬레이션. 팀장급 실무 능력을 종합적으로 평가합니다.',
+    icon: 'ph-tray',
+    colorVar: '--sim-inbasket',
+    comps: [
+      { name: '의사결정', colorVar: '--comp-2' },
+      { name: '전략적 사고', colorVar: '--comp-1' },
+      { name: '실행력', colorVar: '--comp-8' },
+    ],
+    time: '40~60분',
+    xp: '최대 200 XP',
+    status: 'done',
+    score: 85,
+    progress: 100,
+  },
+  {
+    key: 'roleplay',
+    title: 'AI Role-Playing',
+    desc: '코칭 트레이너 시뮬레이션 — AI 팀원과 실제 피드백 대화를 연습합니다. 감정 3단계(방어→저항→수용) 흐름으로 진행됩니다.',
+    icon: 'ph-chats-circle',
+    colorVar: '--sim-roleplay',
+    comps: [
+      { name: '코칭·육성', colorVar: '--comp-7' },
+      { name: '갈등 해결', colorVar: '--comp-4' },
+      { name: '커뮤니케이션', colorVar: '--comp-5' },
+    ],
+    time: '20~30분',
+    xp: '최대 150 XP',
+    status: 'available',
+    score: null,
+    progress: 0,
+  },
+  {
+    key: 'presentation',
+    title: 'AI Presentation',
+    desc: 'AI Canvas 도구로 발표를 구성하고, AI 청중의 실시간 질문에 대응하는 발표력 향상 시뮬레이션입니다.',
+    icon: 'ph-projector-screen',
+    colorVar: '--sim-pres',
+    comps: [
+      { name: '커뮤니케이션', colorVar: '--comp-5' },
+      { name: '영향력 행사', colorVar: '--comp-3' },
+    ],
+    time: '30~45분',
+    xp: '최대 120 XP',
+    status: 'available',
+    score: null,
+    progress: 0,
+  },
+  {
+    key: 'gd',
+    title: 'AI GD',
+    desc: 'AI 참여자들과 함께 그룹 토론을 진행합니다. 발언 리드와 타인 의견 활용을 통해 팀 리더십을 키웁니다.',
+    icon: 'ph-users-three',
+    colorVar: '--sim-gd',
+    comps: [
+      { name: '팀 리더십', colorVar: '--comp-6' },
+      { name: '커뮤니케이션', colorVar: '--comp-5' },
+      { name: '영향력 행사', colorVar: '--comp-3' },
+    ],
+    time: '30~40분',
+    xp: '최대 180 XP',
+    status: 'locked',
+    score: null,
+    progress: 0,
+  },
+];
+
+const grid = document.getElementById('simGrid');
+sims.forEach(s => {
+  const color = cv(s.colorVar);
+  const statusLabel = s.status === 'done' ? '완료' : s.status === 'available' ? '시작 가능' : '잠김';
+  const statusCls = s.status === 'done' ? 'status-done' : s.status === 'available' ? 'status-available' : 'status-locked';
+  const ctaText = s.status === 'done' ? '다시 하기' : s.status === 'available' ? '시작하기' : '잠금 해제 필요';
+  const ctaCls  = s.status === 'done' ? 'cta-retry' : s.status === 'available' ? 'cta-start' : 'cta-locked';
+
+  grid.insertAdjacentHTML('beforeend', `
+    <div class="sim-card" role="listitem" aria-label="${s.title}" style="--sim-bg:${color}14">
+      <div class="sim-card-header">
+        <div class="sim-card-icon" style="background:${color}18" aria-hidden="true">
+          <i class="ph ${s.icon}" style="color:${color}" aria-hidden="true"></i>
+        </div>
+        <span class="sim-badge-status ${statusCls}" aria-label="상태: ${statusLabel}">
+          ${s.status === 'done' ? '<i class="ph ph-check-circle" aria-hidden="true"></i>' : ''}
+          ${statusLabel}
+        </span>
+      </div>
+      <div class="sim-card-title">${s.title}</div>
+      <div class="sim-card-desc">${s.desc}</div>
+      <div class="comp-tags" aria-label="관련 역량">
+        ${s.comps.map(c => `<span class="comp-tag" style="background:${cv(c.colorVar)}15;color:${cv(c.colorVar)}">${c.name}</span>`).join('')}
+      </div>
+      <div class="sim-card-meta">
+        <span class="sim-meta-item">
+          <i class="ph ph-clock" aria-hidden="true"></i>
+          <span>${s.time}</span>
+        </span>
+        <span class="sim-meta-item">
+          <i class="ph ph-star" aria-hidden="true"></i>
+          <span>${s.xp}</span>
+        </span>
+        ${s.status === 'done' ? `<span class="sim-meta-item" style="margin-left:auto;color:${cv('--comp-3')}">최근 점수 ${s.score}</span>` : ''}
+      </div>
+      ${s.status === 'done' ? `<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${s.progress}%;background:${cv('--comp-3')}"></div></div>` : ''}
+      <button class="sim-card-cta ${ctaCls}" aria-label="${s.title} ${ctaText}" ${s.status === 'locked' ? 'disabled aria-disabled="true"' : ''}>${ctaText}</button>
+    </div>`);
+});
+
+document.querySelectorAll('.filter-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tab').forEach(x => { x.classList.remove('active'); x.setAttribute('aria-selected','false'); });
+    t.classList.add('active');
+    t.setAttribute('aria-selected','true');
+  });
+});
+</script>
+</body>
+</html>
