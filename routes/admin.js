@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   listUsers, adminGetUser, unlockUser, setUserRole, softDeleteUser, adminOverview,
   listCohorts, getCohort, createCohort, updateCohort, deleteCohort, assignUsersToCohort,
-  bulkCreateUsers, logAudit,
+  bulkCreateUsers, logAudit, listAuditLog,
 } from '../data/admin-store.js';
 
 const router = Router();
@@ -137,6 +137,12 @@ router.delete('/cohorts/:id', requireRole('admin'), (req, res) => {
   deleteCohort(req.params.id);
   logAudit(req.userId, 'delete_cohort', 'cohort', req.params.id);
   res.json({ message: '코호트가 삭제되었습니다.' });
+});
+
+// ── Audit Log ────────────────────────────────────────────────────
+router.get('/audit-log', requireRole('admin'), (req, res) => {
+  const { limit, offset } = req.query;
+  res.json(listAuditLog({ limit: +limit || 50, offset: +offset || 0 }));
 });
 
 router.post('/cohorts/:id/users', requireRole('admin'), (req, res) => {

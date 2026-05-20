@@ -12,6 +12,15 @@ export function logAudit(actorId, action, targetType, targetId, payload = null) 
   persist();
 }
 
+export function listAuditLog({ limit = 50, offset = 0 } = {}) {
+  const total = queryRow('SELECT COUNT(*) AS n FROM audit_log')?.n ?? 0;
+  const rows = queryAll(
+    'SELECT al.*, u.email AS actor_email, u.name AS actor_name FROM audit_log al LEFT JOIN users u ON al.actor_id=u.id ORDER BY al.created_at DESC LIMIT ? OFFSET ?',
+    [limit, offset]
+  );
+  return { total, limit, offset, rows };
+}
+
 // ── Admin Users ──────────────────────────────────────────────────
 export function listUsers({ page = 1, limit = 20, search = '', cohortId = '', role = '' } = {}) {
   const offset = (page - 1) * limit;
