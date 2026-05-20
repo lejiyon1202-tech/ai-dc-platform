@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — 감사 로그</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding:0;margin:0;display:flex;min-height:100vh; }
+    .sidebar { width:220px;flex-shrink:0;background:var(--bg-card);border-right:var(--border-base);padding:var(--sp-lg) var(--sp-md);display:flex;flex-direction:column;box-shadow:var(--shadow-sm); }
+    .sidebar-logo { font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--accent);margin-bottom:var(--sp-xl);padding:0 var(--sp-sm); }
+    .sidebar-logo span { color:var(--text-primary); }
+    .nav-section-label { font-size:var(--fs-xs);font-weight:var(--fw-medium);color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;padding:0 var(--sp-sm);margin-bottom:6px;margin-top:var(--sp-md); }
+    .nav-item { display:flex;align-items:center;gap:10px;padding:9px var(--sp-sm);border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text-secondary);cursor:pointer;transition:background var(--transition),color var(--transition);text-decoration:none; }
+    .nav-item:hover { background:var(--bg-base);color:var(--text-primary); }
+    .nav-item.active { background:var(--accent-dim);color:var(--accent);font-weight:var(--fw-medium); }
+    .nav-item i { font-size:18px;flex-shrink:0; }
+    .sidebar-footer { margin-top:auto;padding:var(--sp-md) var(--sp-sm) 0;border-top:var(--border-base); }
+    .admin-avatar { width:32px;height:32px;border-radius:50%;background:var(--accent-dim);border:var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--accent); }
+    .main-content { flex:1;padding:var(--sp-xl) var(--sp-lg);overflow-y:auto; }
+    .main-title { font-size:var(--fs-xl);font-weight:var(--fw-bold);margin-bottom:4px; }
+    .main-sub { font-size:var(--fs-sm);color:var(--text-secondary);margin-bottom:var(--sp-lg); }
+    .toolbar { display:flex;gap:var(--sp-sm);align-items:center;margin-bottom:var(--sp-lg);flex-wrap:wrap; }
+    .filter-select { padding:9px 14px;border:var(--border-base);border-radius:var(--radius-md);background:var(--bg-card);color:var(--text-primary);font-size:var(--fs-sm);font-family:var(--font-base);cursor:pointer; }
+    .filter-select:focus { outline:none;border-color:var(--accent-border); }
+    .filter-input { padding:9px 14px;border:var(--border-base);border-radius:var(--radius-md);background:var(--bg-card);color:var(--text-primary);font-size:var(--fs-sm);font-family:var(--font-base); }
+    .filter-input:focus { outline:none;border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-dim); }
+    .table-wrap { background:var(--bg-card);border:var(--border-base);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);overflow:hidden; }
+    table { width:100%;border-collapse:collapse; }
+    th { font-size:var(--fs-xs);color:var(--text-muted);text-align:left;padding:10px var(--sp-md);border-bottom:var(--border-base);background:var(--bg-base);white-space:nowrap; }
+    td { font-size:var(--fs-sm);padding:11px var(--sp-md);border-bottom:var(--border-base);vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:var(--bg-base); }
+    .action-chip { display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:var(--radius-pill);font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap; }
+    .act-role { background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent); }
+    .act-unlock { background:color-mix(in srgb,var(--comp-3) 12%,transparent);color:var(--comp-3); }
+    .act-delete { background:color-mix(in srgb,var(--comp-5) 12%,transparent);color:var(--comp-5); }
+    .act-create { background:color-mix(in srgb,var(--comp-1) 12%,transparent);color:var(--comp-1); }
+    .act-bulk { background:color-mix(in srgb,var(--comp-2) 12%,transparent);color:var(--comp-2); }
+    .act-other { background:var(--track-bg);color:var(--text-muted); }
+    .payload-cell { font-size:var(--fs-xs);color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .pagination { display:flex;align-items:center;justify-content:space-between;padding:var(--sp-md) var(--sp-lg);border-top:var(--border-base); }
+    .page-info { font-size:var(--fs-xs);color:var(--text-muted); }
+    .page-btns { display:flex;gap:4px; }
+    .page-btn { padding:5px 10px;border:var(--border-base);border-radius:var(--radius-sm);font-size:var(--fs-xs);background:var(--bg-base);cursor:pointer;transition:all var(--transition); }
+    .page-btn.active { background:var(--accent);color:var(--text-on-accent);border-color:var(--accent); }
+    .page-btn:hover:not(.active) { border-color:var(--bc-hover); }
+    .empty-state { text-align:center;padding:var(--sp-xl);color:var(--text-muted);font-size:var(--fs-sm); }
+    @media(max-width:900px){.sidebar{display:none;}.toolbar{flex-direction:column;align-items:flex-start;}}
+  </style>
+</head>
+<body>
+<nav class="sidebar" role="navigation" aria-label="관리자 메뉴">
+  <div class="sidebar-logo">AI <span>DC</span></div>
+  <div class="nav-section-label">관리</div>
+  <a href="admin-dashboard.html" class="nav-item"><i class="ph ph-squares-four" aria-hidden="true"></i> 대시보드</a>
+  <a href="admin-users.html" class="nav-item"><i class="ph ph-user-list" aria-hidden="true"></i> 학습자 관리</a>
+  <a href="admin-cohorts.html" class="nav-item"><i class="ph ph-users" aria-hidden="true"></i> 코호트 관리</a>
+  <a href="admin-bulk-upload.html" class="nav-item"><i class="ph ph-upload-simple" aria-hidden="true"></i> CSV 일괄 등록</a>
+  <div class="nav-section-label">보안</div>
+  <a href="admin-audit-log.html" class="nav-item active" aria-current="page"><i class="ph ph-clipboard-text" aria-hidden="true"></i> 감사 로그</a>
+  <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;gap:var(--sp-sm)">
+      <div class="admin-avatar" id="adminInitial">관</div>
+      <div><div style="font-size:var(--fs-sm);font-weight:var(--fw-medium)" id="adminName">관리자</div><div style="font-size:var(--fs-xs);color:var(--text-muted)" id="adminRole">관리자</div></div>
+    </div>
+  </div>
+</nav>
+<main class="main-content" role="main">
+  <div class="main-title">감사 로그</div>
+  <div class="main-sub">관리자 액션 전체 기록 — 역할 변경·잠금 해제·삭제·일괄 등록</div>
+  <div class="toolbar" role="search" aria-label="로그 필터">
+    <select id="actionFilter" class="filter-select" aria-label="액션 종류 필터">
+      <option value="">전체 액션</option>
+      <option value="role_change">역할 변경</option>
+      <option value="unlock">잠금 해제</option>
+      <option value="delete">삭제</option>
+      <option value="bulk_create">일괄 등록</option>
+      <option value="cohort_assign">코호트 배정</option>
+    </select>
+    <input type="date" id="dateFrom" class="filter-input" aria-label="시작 날짜">
+    <input type="date" id="dateTo" class="filter-input" aria-label="종료 날짜">
+  </div>
+  <div class="table-wrap" role="region" aria-label="감사 로그 목록">
+    <table aria-label="감사 로그 테이블">
+      <thead><tr><th>시각 (KST)</th><th>액션</th><th>수행자</th><th>대상</th><th>상세</th></tr></thead>
+      <tbody id="logTable"></tbody>
+    </table>
+    <div class="pagination" id="pagination">
+      <span class="page-info" id="pageInfo">로딩 중...</span>
+      <div class="page-btns" id="pageBtns"></div>
+    </div>
+  </div>
+</main>
+<script>
+const ACTION_META={role_change:{label:'역할 변경',cls:'act-role'},unlock:{label:'잠금 해제',cls:'act-unlock'},delete:{label:'삭제',cls:'act-delete'},bulk_create:{label:'일괄 등록',cls:'act-bulk'},cohort_assign:{label:'코호트 배정',cls:'act-create'},cohort_create:{label:'코호트 생성',cls:'act-create'},cohort_delete:{label:'코호트 삭제',cls:'act-delete'}};
+let page=1;const LIMIT=20;
+(async()=>{
+  try{
+    const r=await fetch('/api/auth/me',{credentials:'include'});
+    if(!r.ok){location.href='login.html';return;}
+    const d=await r.json();
+    if(d.user.role!=='admin'&&d.user.role!=='supervisor'){location.href='dashboard.html';return;}
+    document.getElementById('adminName').textContent=d.user.name||'관리자';
+    document.getElementById('adminRole').textContent=d.user.role==='admin'?'관리자':'수퍼바이저';
+    document.getElementById('adminInitial').textContent=(d.user.name||'관')[0];
+  }catch(e){location.href='login.html';}
+})();
+function buildQuery(){
+  const action=document.getElementById('actionFilter').value;
+  const from=document.getElementById('dateFrom').value;
+  const to=document.getElementById('dateTo').value;
+  const params=new URLSearchParams({limit:LIMIT,offset:(page-1)*LIMIT});
+  if(action)params.set('action',action);
+  if(from)params.set('from',from);
+  if(to)params.set('to',to);
+  return params.toString();
+}
+async function load(){
+  try{
+    const r=await fetch(`/api/admin/audit-log?${buildQuery()}`,{credentials:'include'});
+    if(!r.ok){document.getElementById('logTable').innerHTML=`<tr><td colspan="5" class="empty-state">감사 로그를 불러올 수 없습니다.</td></tr>`;return;}
+    const d=await r.json();
+    const logs=d.logs||d||[];
+    const total=d.total||logs.length;
+    renderTable(logs);
+    renderPagination(total);
+  }catch(e){document.getElementById('logTable').innerHTML=`<tr><td colspan="5" class="empty-state">서버 연결 오류입니다.</td></tr>`;}
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtKST(iso){if(!iso)return'—';const d=new Date(iso);return d.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
+function fmtPayload(p){if(!p)return'—';if(typeof p==='string'){try{p=JSON.parse(p);}catch(e){return esc(p);}}if(p.from&&p.to)return`${esc(p.from)} → ${esc(p.to)}`;return esc(JSON.stringify(p)).slice(0,60);}
+function renderTable(logs){
+  const tb=document.getElementById('logTable');tb.innerHTML='';
+  if(!logs.length){tb.innerHTML=`<tr><td colspan="5" class="empty-state">감사 로그가 없습니다.</td></tr>`;return;}
+  logs.forEach(l=>{
+    const meta=ACTION_META[l.action]||{label:l.action||'기타',cls:'act-other'};
+    tb.insertAdjacentHTML('beforeend',`<tr>
+      <td style="white-space:nowrap;color:var(--text-muted)">${fmtKST(l.created_at)}</td>
+      <td><span class="action-chip ${meta.cls}">${meta.label}</span></td>
+      <td style="font-weight:var(--fw-medium)">${esc(l.actor_name||l.actor_id||'—')}</td>
+      <td style="color:var(--text-secondary)">${esc(l.target_name||l.target_id||'—')}</td>
+      <td class="payload-cell" title="${esc(JSON.stringify(l.payload||{}))}">${fmtPayload(l.payload)}</td>
+    </tr>`);
+  });
+}
+function renderPagination(total){
+  document.getElementById('pageInfo').textContent=`전체 ${total}건`;
+  const el=document.getElementById('pageBtns');el.innerHTML='';
+  const pages=Math.ceil(total/LIMIT);
+  for(let i=1;i<=Math.min(pages,10);i++){
+    const b=document.createElement('button');b.className='page-btn'+(i===page?' active':'');b.textContent=i;b.onclick=()=>{page=i;load();};el.appendChild(b);
+  }
+}
+['actionFilter','dateFrom','dateTo'].forEach(id=>{document.getElementById(id).addEventListener('change',()=>{page=1;load();});});
+load();
+</script>
+</body>
+</html>
