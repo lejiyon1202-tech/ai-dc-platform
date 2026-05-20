@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — 학습자 관리</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding:0;margin:0;display:flex;min-height:100vh; }
+    .sidebar { width:220px;flex-shrink:0;background:var(--bg-card);border-right:var(--border-base);padding:var(--sp-lg) var(--sp-md);display:flex;flex-direction:column;box-shadow:var(--shadow-sm); }
+    .sidebar-logo { font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--accent);margin-bottom:var(--sp-xl);padding:0 var(--sp-sm); }
+    .sidebar-logo span { color:var(--text-primary); }
+    .nav-section-label { font-size:var(--fs-xs);font-weight:var(--fw-medium);color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;padding:0 var(--sp-sm);margin-bottom:6px;margin-top:var(--sp-md); }
+    .nav-item { display:flex;align-items:center;gap:10px;padding:9px var(--sp-sm);border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text-secondary);cursor:pointer;transition:background var(--transition),color var(--transition);text-decoration:none; }
+    .nav-item:hover { background:var(--bg-base);color:var(--text-primary); }
+    .nav-item.active { background:var(--accent-dim);color:var(--accent);font-weight:var(--fw-medium); }
+    .nav-item i { font-size:18px;flex-shrink:0; }
+    .sidebar-footer { margin-top:auto;padding:var(--sp-md) var(--sp-sm) 0;border-top:var(--border-base); }
+    .admin-user { display:flex;align-items:center;gap:var(--sp-sm); }
+    .admin-avatar { width:32px;height:32px;border-radius:50%;background:var(--accent-dim);border:var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--accent); }
+    .admin-name { font-size:var(--fs-sm);font-weight:var(--fw-medium); }
+    .admin-role { font-size:var(--fs-xs);color:var(--text-muted); }
+    .main-content { flex:1;padding:var(--sp-xl) var(--sp-lg);overflow-y:auto; }
+    .main-title { font-size:var(--fs-xl);font-weight:var(--fw-bold);margin-bottom:4px; }
+    .main-sub { font-size:var(--fs-sm);color:var(--text-secondary);margin-bottom:var(--sp-xl); }
+    .toolbar { display:flex;gap:var(--sp-sm);align-items:center;margin-bottom:var(--sp-lg);flex-wrap:wrap; }
+    .search-wrap { flex:1;min-width:200px;position:relative; }
+    .search-input { width:100%;padding:9px 14px 9px 36px;border:var(--border-base);border-radius:var(--radius-md);background:var(--bg-card);color:var(--text-primary);font-size:var(--fs-sm);font-family:var(--font-base);box-sizing:border-box; }
+    .search-input:focus { outline:none;border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-dim); }
+    .search-icon { position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:16px; }
+    .filter-select { padding:9px 14px;border:var(--border-base);border-radius:var(--radius-md);background:var(--bg-card);color:var(--text-primary);font-size:var(--fs-sm);font-family:var(--font-base);cursor:pointer; }
+    .filter-select:focus { outline:none;border-color:var(--accent-border); }
+    .table-wrap { background:var(--bg-card);border:var(--border-base);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);overflow:hidden; }
+    table { width:100%;border-collapse:collapse; }
+    th { font-size:var(--fs-xs);color:var(--text-muted);text-align:left;padding:10px var(--sp-md);border-bottom:var(--border-base);background:var(--bg-base);white-space:nowrap; }
+    td { font-size:var(--fs-sm);padding:12px var(--sp-md);border-bottom:var(--border-base);vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:var(--bg-base); }
+    .role-badge { display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--radius-pill);font-size:10px;font-weight:var(--fw-medium);text-transform:uppercase;letter-spacing:0.05em; }
+    .role-admin { background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent); }
+    .role-supervisor { background:color-mix(in srgb,var(--comp-1) 12%,transparent);color:var(--comp-1); }
+    .role-learner { background:var(--track-bg);color:var(--text-secondary); }
+    .lock-badge { display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:var(--radius-pill);font-size:10px; }
+    .locked { background:color-mix(in srgb,var(--comp-5) 12%,transparent);color:var(--comp-5); }
+    .action-btns { display:flex;gap:6px; }
+    .btn-action { padding:5px 10px;border-radius:var(--radius-sm);font-size:var(--fs-xs);border:var(--border-base);background:var(--bg-base);color:var(--text-secondary);cursor:pointer;transition:all var(--transition); }
+    .btn-action:hover { border-color:var(--bc-hover);color:var(--text-primary); }
+    .btn-action.danger:hover { border-color:var(--comp-5);color:var(--comp-5); }
+    .pagination { display:flex;align-items:center;justify-content:space-between;padding:var(--sp-md) var(--sp-lg);border-top:var(--border-base);background:var(--bg-card); }
+    .page-info { font-size:var(--fs-xs);color:var(--text-muted); }
+    .page-btns { display:flex;gap:4px; }
+    .page-btn { padding:5px 10px;border:var(--border-base);border-radius:var(--radius-sm);font-size:var(--fs-xs);background:var(--bg-base);cursor:pointer;transition:all var(--transition); }
+    .page-btn.active { background:var(--accent);color:var(--text-on-accent);border-color:var(--accent); }
+    .page-btn:hover:not(.active) { border-color:var(--bc-hover); }
+    .empty-state { text-align:center;padding:var(--sp-xl);color:var(--text-muted);font-size:var(--fs-sm); }
+    @media(max-width:900px){.sidebar{display:none;}.toolbar{flex-direction:column;}}
+  </style>
+</head>
+<body>
+<nav class="sidebar" role="navigation" aria-label="관리자 메뉴">
+  <div class="sidebar-logo">AI <span>DC</span></div>
+  <div class="nav-section-label">관리</div>
+  <a href="admin-dashboard.html" class="nav-item"><i class="ph ph-squares-four" aria-hidden="true"></i> 대시보드</a>
+  <a href="admin-users.html" class="nav-item active" aria-current="page"><i class="ph ph-user-list" aria-hidden="true"></i> 학습자 관리</a>
+  <a href="admin-cohorts.html" class="nav-item"><i class="ph ph-users" aria-hidden="true"></i> 코호트 관리</a>
+  <a href="admin-bulk-upload.html" class="nav-item"><i class="ph ph-upload-simple" aria-hidden="true"></i> CSV 일괄 등록</a>
+  <div class="sidebar-footer">
+    <div class="admin-user">
+      <div class="admin-avatar" id="adminInitial" aria-hidden="true">관</div>
+      <div><div class="admin-name" id="adminName">관리자</div><div class="admin-role" id="adminRole">관리자</div></div>
+    </div>
+  </div>
+</nav>
+<main class="main-content" role="main">
+  <div class="main-title">학습자 관리</div>
+  <div class="main-sub" id="mainSub">전체 학습자 목록 · 검색·필터·역할 변경·삭제</div>
+  <div class="toolbar" role="search">
+    <div class="search-wrap">
+      <i class="ph ph-magnifying-glass search-icon" aria-hidden="true"></i>
+      <input type="search" id="searchInput" class="search-input" placeholder="이름·이메일 검색" aria-label="학습자 검색">
+    </div>
+    <select id="roleFilter" class="filter-select" aria-label="역할 필터">
+      <option value="">전체 역할</option>
+      <option value="admin">관리자</option>
+      <option value="supervisor">수퍼바이저</option>
+      <option value="learner">학습자</option>
+    </select>
+    <select id="lockFilter" class="filter-select" aria-label="계정 상태 필터">
+      <option value="">전체 상태</option>
+      <option value="locked">잠금</option>
+      <option value="active">정상</option>
+    </select>
+  </div>
+  <div class="table-wrap" role="region" aria-label="학습자 목록">
+    <table aria-label="학습자 테이블">
+      <thead><tr><th>이름</th><th>이메일</th><th>역할</th><th>코호트</th><th>상태</th><th>등록일</th><th>액션</th></tr></thead>
+      <tbody id="userTable"></tbody>
+    </table>
+    <div class="pagination" id="pagination"><span class="page-info" id="pageInfo">0명</span><div class="page-btns" id="pageBtns"></div></div>
+  </div>
+</main>
+<script>
+let users=[],filtered=[],page=1;const PAGE=15;
+(async()=>{
+  try{
+    const r=await fetch('/api/auth/me',{credentials:'include'});
+    if(!r.ok){location.href='login.html';return;}
+    const d=await r.json();
+    if(d.user.role!=='admin'&&d.user.role!=='supervisor'){location.href=`dashboard.html?u=${d.user.id}`;return;}
+    document.getElementById('adminName').textContent=d.user.name||'관리자';
+    document.getElementById('adminRole').textContent=d.user.role==='admin'?'관리자':'수퍼바이저';
+    document.getElementById('adminInitial').textContent=(d.user.name||'관')[0];
+  }catch(e){location.href='login.html';}
+})();
+async function load(){
+  try{
+    const r=await fetch('/api/admin/users?limit=500',{credentials:'include'});
+    if(!r.ok)return;
+    const d=await r.json();
+    users=d.users||d||[];
+    applyFilter();
+  }catch(e){}
+}
+function applyFilter(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const role=document.getElementById('roleFilter').value;
+  const lock=document.getElementById('lockFilter').value;
+  filtered=users.filter(u=>{
+    const matchQ=!q||(u.name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q);
+    const matchR=!role||u.role===role;
+    const isLocked=u.locked_until&&new Date(u.locked_until)>new Date();
+    const matchL=!lock||(lock==='locked'?isLocked:!isLocked);
+    return matchQ&&matchR&&matchL;
+  });
+  page=1;render();
+}
+function render(){
+  const start=(page-1)*PAGE,end=start+PAGE,slice=filtered.slice(start,end);
+  document.getElementById('pageInfo').textContent=`${filtered.length}명 중 ${start+1}~${Math.min(end,filtered.length)}`;
+  const tb=document.getElementById('userTable');tb.innerHTML='';
+  if(!slice.length){tb.innerHTML=`<tr><td colspan="7" class="empty-state">검색 결과가 없습니다.</td></tr>`;pageBtns();return;}
+  slice.forEach(u=>{
+    const isLocked=u.locked_until&&new Date(u.locked_until)>new Date();
+    const roleCls=u.role==='admin'?'role-admin':u.role==='supervisor'?'role-supervisor':'role-learner';
+    const roleTxt=u.role==='admin'?'Admin':u.role==='supervisor'?'Supervisor':'Learner';
+    const created=u.created_at?new Date(u.created_at).toLocaleDateString('ko-KR'):'—';
+    tb.insertAdjacentHTML('beforeend',`<tr>
+      <td><a href="admin-user-detail.html?id=${u.id}" style="color:var(--text-primary);text-decoration:none;font-weight:var(--fw-medium)">${escHtml(u.name||'—')}</a></td>
+      <td style="color:var(--text-secondary)">${escHtml(u.email)}</td>
+      <td><span class="role-badge ${roleCls}">${roleTxt}</span></td>
+      <td style="color:var(--text-muted)">${escHtml(u.cohort_name||'—')}</td>
+      <td>${isLocked?`<span class="lock-badge locked"><i class="ph ph-lock"></i>잠금</span>`:'<span style="font-size:var(--fs-xs);color:var(--comp-3)">정상</span>'}</td>
+      <td style="color:var(--text-muted)">${created}</td>
+      <td><div class="action-btns">
+        <button class="btn-action" onclick="location.href='admin-user-detail.html?id=${u.id}'" title="상세">상세</button>
+        ${isLocked?`<button class="btn-action" onclick="unlock('${u.id}')" title="잠금 해제">해제</button>`:''}
+        <button class="btn-action" onclick="changeRole('${u.id}','${u.role}')" title="역할 변경">역할</button>
+        <button class="btn-action danger" onclick="deleteUser('${u.id}','${escHtml(u.name||'')}')">삭제</button>
+      </div></td>
+    </tr>`);
+  });
+  pageBtns();
+}
+function pageBtns(){
+  const total=Math.ceil(filtered.length/PAGE);
+  const el=document.getElementById('pageBtns');el.innerHTML='';
+  for(let i=1;i<=total;i++){
+    const b=document.createElement('button');b.className='page-btn'+(i===page?' active':'');b.textContent=i;b.onclick=()=>{page=i;render();};el.appendChild(b);
+  }
+}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+async function unlock(id){if(!confirm('계정 잠금을 해제하시겠습니까?'))return;try{await fetch(`/api/admin/users/${id}/unlock`,{method:'POST',credentials:'include'});load();}catch(e){}}
+async function changeRole(id,current){
+  const roles=['admin','supervisor','learner'];
+  const next=prompt(`역할 변경 (현재: ${current})\n입력: admin / supervisor / learner`);
+  if(!next||!roles.includes(next))return;
+  try{await fetch(`/api/admin/users/${id}/role`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:next}),credentials:'include'});load();}catch(e){}
+}
+async function deleteUser(id,name){if(!confirm(`"${name}" 학습자를 삭제하시겠습니까?\n삭제 후 복구가 불가능합니다.`))return;try{await fetch(`/api/admin/users/${id}`,{method:'DELETE',credentials:'include'});load();}catch(e){}}
+document.getElementById('searchInput').addEventListener('input',applyFilter);
+document.getElementById('roleFilter').addEventListener('change',applyFilter);
+document.getElementById('lockFilter').addEventListener('change',applyFilter);
+load();
+</script>
+</body>
+</html>

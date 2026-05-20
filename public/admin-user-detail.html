@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — 학습자 상세</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding:0;margin:0;display:flex;min-height:100vh; }
+    .sidebar { width:220px;flex-shrink:0;background:var(--bg-card);border-right:var(--border-base);padding:var(--sp-lg) var(--sp-md);display:flex;flex-direction:column;box-shadow:var(--shadow-sm); }
+    .sidebar-logo { font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--accent);margin-bottom:var(--sp-xl);padding:0 var(--sp-sm); }
+    .sidebar-logo span { color:var(--text-primary); }
+    .nav-item { display:flex;align-items:center;gap:10px;padding:9px var(--sp-sm);border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text-secondary);cursor:pointer;transition:background var(--transition),color var(--transition);text-decoration:none; }
+    .nav-item:hover { background:var(--bg-base);color:var(--text-primary); }
+    .nav-item.active { background:var(--accent-dim);color:var(--accent);font-weight:var(--fw-medium); }
+    .nav-item i { font-size:18px;flex-shrink:0; }
+    .nav-section-label { font-size:var(--fs-xs);font-weight:var(--fw-medium);color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;padding:0 var(--sp-sm);margin-bottom:6px;margin-top:var(--sp-md); }
+    .sidebar-footer { margin-top:auto;padding:var(--sp-md) var(--sp-sm) 0;border-top:var(--border-base); }
+    .admin-avatar { width:32px;height:32px;border-radius:50%;background:var(--accent-dim);border:var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--accent); }
+    .admin-name { font-size:var(--fs-sm);font-weight:var(--fw-medium); }
+    .admin-role { font-size:var(--fs-xs);color:var(--text-muted); }
+    .main-content { flex:1;padding:var(--sp-xl) var(--sp-lg);overflow-y:auto;max-width:860px; }
+    .back-btn { display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-sm);color:var(--text-secondary);text-decoration:none;margin-bottom:var(--sp-lg);transition:color var(--transition); }
+    .back-btn:hover { color:var(--accent); }
+    .profile-card { background:var(--bg-card);border:var(--border-base);border-radius:var(--radius-lg);padding:var(--sp-lg);box-shadow:var(--shadow-card);display:flex;align-items:center;gap:var(--sp-lg);margin-bottom:var(--sp-lg); }
+    .profile-avatar { width:56px;height:56px;border-radius:50%;background:var(--accent-dim);border:var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:var(--fs-xl);font-weight:var(--fw-bold);color:var(--accent);flex-shrink:0; }
+    .profile-name { font-size:var(--fs-lg);font-weight:var(--fw-bold);margin-bottom:2px; }
+    .profile-email { font-size:var(--fs-sm);color:var(--text-secondary); }
+    .profile-meta { display:flex;gap:var(--sp-md);margin-top:var(--sp-sm);flex-wrap:wrap; }
+    .meta-tag { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--radius-pill);font-size:var(--fs-xs); }
+    .detail-grid { display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-md);margin-bottom:var(--sp-lg); }
+    .d-card { background:var(--bg-card);border:var(--border-base);border-radius:var(--radius-lg);padding:var(--sp-lg);box-shadow:var(--shadow-card); }
+    .d-card-title { font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-weight:var(--fw-medium);margin-bottom:var(--sp-md); }
+    .xp-val { font-size:var(--fs-2xl);font-weight:var(--fw-bold);color:var(--accent); }
+    .xp-level { font-size:var(--fs-sm);color:var(--text-secondary);margin-top:2px; }
+    .track { height:6px;background:var(--track-bg);border-radius:var(--radius-pill);overflow:hidden;margin-top:var(--sp-sm); }
+    .fill { height:100%;border-radius:var(--radius-pill);background:var(--accent);transition:width 0.8s; }
+    .comp-row { display:flex;align-items:center;gap:var(--sp-sm);margin-bottom:8px; }
+    .comp-row-name { font-size:var(--fs-xs);flex:1;color:var(--text-secondary); }
+    .comp-row-bar { flex:2;height:4px;background:var(--track-bg);border-radius:var(--radius-pill);overflow:hidden; }
+    .comp-row-fill { height:100%;border-radius:var(--radius-pill); }
+    .comp-row-val { font-size:var(--fs-xs);font-weight:var(--fw-bold);min-width:28px;text-align:right; }
+    .sim-list { display:flex;flex-direction:column;gap:var(--sp-sm); }
+    .sim-item { display:flex;align-items:center;gap:var(--sp-sm);padding:var(--sp-sm) var(--sp-md);background:var(--bg-base);border-radius:var(--radius-md);font-size:var(--fs-sm); }
+    .sim-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+    .detail-wide { grid-column:span 2; }
+    @media(max-width:900px){.sidebar{display:none;}.detail-grid{grid-template-columns:1fr;}.detail-wide{grid-column:span 1;}}
+  </style>
+</head>
+<body>
+<nav class="sidebar" role="navigation" aria-label="관리자 메뉴">
+  <div class="sidebar-logo">AI <span>DC</span></div>
+  <div class="nav-section-label">관리</div>
+  <a href="admin-dashboard.html" class="nav-item"><i class="ph ph-squares-four" aria-hidden="true"></i> 대시보드</a>
+  <a href="admin-users.html" class="nav-item active"><i class="ph ph-user-list" aria-hidden="true"></i> 학습자 관리</a>
+  <a href="admin-cohorts.html" class="nav-item"><i class="ph ph-users" aria-hidden="true"></i> 코호트 관리</a>
+  <a href="admin-bulk-upload.html" class="nav-item"><i class="ph ph-upload-simple" aria-hidden="true"></i> CSV 일괄 등록</a>
+  <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;gap:var(--sp-sm)">
+      <div class="admin-avatar" id="adminInitial">관</div>
+      <div><div class="admin-name" id="adminName">관리자</div><div class="admin-role" id="adminRole">관리자</div></div>
+    </div>
+  </div>
+</nav>
+<main class="main-content" role="main">
+  <a href="admin-users.html" class="back-btn"><i class="ph ph-arrow-left" aria-hidden="true"></i> 학습자 목록</a>
+  <div id="profileCard" class="profile-card">
+    <div class="profile-avatar" id="avatar">?</div>
+    <div>
+      <div class="profile-name" id="profName">로딩 중...</div>
+      <div class="profile-email" id="profEmail">—</div>
+      <div class="profile-meta" id="profMeta"></div>
+    </div>
+  </div>
+  <div class="detail-grid">
+    <div class="d-card">
+      <div class="d-card-title">XP · 레벨</div>
+      <div class="xp-val" id="xpVal">—</div>
+      <div class="xp-level" id="xpLevel">—</div>
+      <div class="track"><div class="fill" id="xpFill" style="width:0%"></div></div>
+    </div>
+    <div class="d-card">
+      <div class="d-card-title">시뮬레이션 완료</div>
+      <div class="sim-list" id="simList"></div>
+    </div>
+    <div class="d-card detail-wide">
+      <div class="d-card-title">12역량 점수</div>
+      <div id="compList"></div>
+    </div>
+  </div>
+</main>
+<script>
+const COMP_NAMES=['전략적 사고','의사결정','영향력','갈등 해결','커뮤니케이션','팀 리더십','코칭·육성','실행력','혁신·창의','조직이해','고객지향','자기개발'];
+const COMP_VARS=['--comp-1','--comp-2','--comp-3','--comp-4','--comp-5','--comp-6','--comp-7','--comp-8','--comp-9','--comp-10','--comp-11','--comp-12'];
+const COMP_KEYS=['strategic_thinking','decision_making','organizational_influence','conflict_resolution','communication','collaboration','coaching','execution','problem_solving','change_leadership','results_orientation','self_awareness'];
+const SIM_META={inbasket:{name:'AI In-Basket',color:'var(--sim-inbasket)'},roleplay:{name:'AI Role-Playing',color:'var(--sim-roleplay)'},gd:{name:'AI GD',color:'var(--sim-gd)'},canvas:{name:'AI Presentation',color:'var(--sim-pres)'}};
+const css=getComputedStyle(document.documentElement);
+const cv=k=>css.getPropertyValue(k).trim();
+const uid=new URLSearchParams(location.search).get('id');
+(async()=>{
+  try{
+    const r=await fetch('/api/auth/me',{credentials:'include'});
+    if(!r.ok){location.href='login.html';return;}
+    const d=await r.json();
+    if(d.user.role!=='admin'&&d.user.role!=='supervisor'){location.href='dashboard.html';return;}
+    document.getElementById('adminName').textContent=d.user.name||'관리자';
+    document.getElementById('adminRole').textContent=d.user.role==='admin'?'관리자':'수퍼바이저';
+    document.getElementById('adminInitial').textContent=(d.user.name||'관')[0];
+  }catch(e){location.href='login.html';}
+})();
+(async()=>{
+  if(!uid)return;
+  try{
+    const r=await fetch(`/api/admin/users/${uid}`,{credentials:'include'});
+    if(!r.ok)return;
+    const u=await r.json();
+    const user=u.user||u;
+    document.getElementById('avatar').textContent=(user.name||'?')[0];
+    document.getElementById('profName').textContent=user.name||'—';
+    document.getElementById('profEmail').textContent=user.email||'—';
+    const roleTxt=user.role==='admin'?'관리자':user.role==='supervisor'?'수퍼바이저':'학습자';
+    document.getElementById('profMeta').innerHTML=`<span class="meta-tag" style="background:var(--accent-dim);color:var(--accent)">${roleTxt}</span>${user.cohort_name?`<span class="meta-tag" style="background:var(--track-bg);color:var(--text-muted)">${user.cohort_name}</span>`:''}`;
+    const stats=u.stats||{};
+    const xp=stats.xp||user.xp||0;
+    const level=stats.level||user.level||1;
+    document.getElementById('xpVal').textContent=xp.toLocaleString()+' XP';
+    document.getElementById('xpLevel').textContent=`Lv.${level}`;
+    document.getElementById('xpFill').style.width=Math.min((xp%1000)/10,100)+'%';
+    const sims=stats.completedSimulations||user.completedSimulations||[];
+    const sl=document.getElementById('simList');
+    Object.entries(SIM_META).forEach(([k,v])=>{
+      const done=sims.includes(k);
+      sl.insertAdjacentHTML('beforeend',`<div class="sim-item"><div class="sim-dot" style="background:${done?v.color:'var(--track-bg)'}"></div><span style="flex:1">${v.name}</span><span style="font-size:var(--fs-xs);color:${done?'var(--comp-3)':'var(--text-muted)'}">${done?'완료':'미완료'}</span></div>`);
+    });
+    const comps=stats.competencies||user.competencies||{};
+    const cl=document.getElementById('compList');
+    cl.style.display='grid';cl.style.gridTemplateColumns='1fr 1fr';cl.style.gap='8px 24px';
+    COMP_KEYS.forEach((k,i)=>{
+      const val=comps[k]!=null?Math.round(comps[k]*100):0;
+      const col=cv(COMP_VARS[i]);
+      cl.insertAdjacentHTML('beforeend',`<div class="comp-row"><span class="comp-row-name">${COMP_NAMES[i]}</span><div class="comp-row-bar"><div class="comp-row-fill" style="width:${val}%;background:${col}"></div></div><span class="comp-row-val" style="color:${col}">${val}</span></div>`);
+    });
+  }catch(e){}
+})();
+</script>
+</body>
+</html>

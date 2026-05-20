@@ -12,6 +12,7 @@ import {
   initDb, createUser, getUserByEmail, getUserById,
   incrementFailedLogin, resetFailedLogin, purgeInvalidNames,
 } from './data/db.js';
+import adminRouter from './routes/admin.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '3009', 10);
@@ -189,7 +190,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     res.json({
       message: '로그인 성공',
       token,
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role ?? 'learner' },
     });
   } catch (err) {
     console.error('[AUTH] Login error:', err.message);
@@ -209,8 +210,11 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/auth/me', authRequired, (req, res) => {
   const user = getUserById(req.userId);
   if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
-  res.json({ user: { id: user.id, email: user.email, name: user.name } });
+  res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role ?? 'learner' } });
 });
+
+// ── Admin Routes ─────────────────────────────────────────────────
+app.use('/api/admin', authRequired, adminRouter);
 
 // ── Health ───────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({
@@ -222,6 +226,23 @@ app.get('/api/health', (req, res) => res.json({
 await initDb();
 const purged = purgeInvalidNames();
 if (purged > 0) console.log(`[INIT] 유효하지 않은 이름 user ${purged}건 정리`);
+
+// 첫 관리자 계정 시드 (INITIAL_ADMIN_EMAIL + INITIAL_ADMIN_PASSWORD)
+const seedEmail = process.env.INITIAL_ADMIN_EMAIL;
+const seedPw = process.env.INITIAL_ADMIN_PASSWORD;
+if (seedEmail && seedPw) {
+  const existing = getUserByEmail(seedEmail);
+  if (!existing) {
+    const { db, persist } = await import('./data/db.js');
+    const hash = await bcrypt.hash(seedPw, 12);
+    const id = uuidv4();
+    db.run('INSERT INTO users (id,email,password_hash,name,role) VALUES (?,?,?,?,?)',
+      [id, seedEmail.toLowerCase(), hash, 'Admin', 'admin']);
+    persist();
+    console.log(`[INIT] 관리자 계정 시드 완료: ${seedEmail}`);
+  }
+}
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[INIT] AI DC Platform: http://localhost:${PORT}`);
 });

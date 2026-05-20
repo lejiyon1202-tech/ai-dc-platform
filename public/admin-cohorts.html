@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — 코호트 관리</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding:0;margin:0;display:flex;min-height:100vh; }
+    .sidebar { width:220px;flex-shrink:0;background:var(--bg-card);border-right:var(--border-base);padding:var(--sp-lg) var(--sp-md);display:flex;flex-direction:column;box-shadow:var(--shadow-sm); }
+    .sidebar-logo { font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--accent);margin-bottom:var(--sp-xl);padding:0 var(--sp-sm); }
+    .sidebar-logo span { color:var(--text-primary); }
+    .nav-item { display:flex;align-items:center;gap:10px;padding:9px var(--sp-sm);border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text-secondary);cursor:pointer;transition:background var(--transition),color var(--transition);text-decoration:none; }
+    .nav-item:hover { background:var(--bg-base);color:var(--text-primary); }
+    .nav-item.active { background:var(--accent-dim);color:var(--accent);font-weight:var(--fw-medium); }
+    .nav-item i { font-size:18px;flex-shrink:0; }
+    .nav-section-label { font-size:var(--fs-xs);font-weight:var(--fw-medium);color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;padding:0 var(--sp-sm);margin-bottom:6px;margin-top:var(--sp-md); }
+    .sidebar-footer { margin-top:auto;padding:var(--sp-md) var(--sp-sm) 0;border-top:var(--border-base); }
+    .admin-avatar { width:32px;height:32px;border-radius:50%;background:var(--accent-dim);border:var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--accent); }
+    .admin-name { font-size:var(--fs-sm);font-weight:var(--fw-medium); }
+    .admin-role { font-size:var(--fs-xs);color:var(--text-muted); }
+    .main-content { flex:1;padding:var(--sp-xl) var(--sp-lg);overflow-y:auto; }
+    .page-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-xl); }
+    .main-title { font-size:var(--fs-xl);font-weight:var(--fw-bold); }
+    .main-sub { font-size:var(--fs-sm);color:var(--text-secondary);margin-top:4px; }
+    .btn-primary { padding:10px 20px;background:var(--accent);color:var(--text-on-accent);border:none;border-radius:var(--radius-md);font-size:var(--fs-sm);font-weight:var(--fw-bold);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:opacity var(--transition); }
+    .btn-primary:hover { opacity:0.88; }
+    .cohort-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-md); }
+    .cohort-card { background:var(--bg-card);border:var(--border-base);border-radius:var(--radius-lg);padding:var(--sp-lg);box-shadow:var(--shadow-card);transition:border-color var(--transition),box-shadow var(--transition); }
+    .cohort-card:hover { border-color:var(--bc-hover);box-shadow:var(--shadow-card-hover); }
+    .cohort-name { font-size:var(--fs-base);font-weight:var(--fw-bold);margin-bottom:4px; }
+    .cohort-desc { font-size:var(--fs-xs);color:var(--text-muted);margin-bottom:var(--sp-md);min-height:18px; }
+    .cohort-stat { display:flex;gap:var(--sp-md);margin-bottom:var(--sp-md); }
+    .stat-item { text-align:center; }
+    .stat-val { font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--accent); }
+    .stat-label { font-size:var(--fs-xs);color:var(--text-muted); }
+    .cohort-actions { display:flex;gap:6px;padding-top:var(--sp-sm);border-top:var(--border-base); }
+    .btn-sm { padding:5px 10px;border-radius:var(--radius-sm);font-size:var(--fs-xs);border:var(--border-base);background:var(--bg-base);color:var(--text-secondary);cursor:pointer;transition:all var(--transition);flex:1;text-align:center; }
+    .btn-sm:hover { border-color:var(--bc-hover);color:var(--text-primary); }
+    .btn-sm.danger:hover { border-color:var(--comp-5);color:var(--comp-5); }
+    .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--bg-card);border:var(--border-base);border-radius:var(--radius-lg);padding:var(--sp-xl);width:420px;max-width:90vw;box-shadow:var(--shadow-md); }
+    .modal-title { font-size:var(--fs-lg);font-weight:var(--fw-bold);margin-bottom:var(--sp-lg); }
+    .form-group { margin-bottom:var(--sp-md); }
+    .form-label { display:block;font-size:var(--fs-sm);font-weight:var(--fw-medium);margin-bottom:6px; }
+    .form-input { width:100%;padding:10px 14px;border:var(--border-base);border-radius:var(--radius-md);background:var(--bg-base);color:var(--text-primary);font-size:var(--fs-sm);font-family:var(--font-base);box-sizing:border-box; }
+    .form-input:focus { outline:none;border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-dim); }
+    .modal-actions { display:flex;gap:var(--sp-sm);justify-content:flex-end;margin-top:var(--sp-lg); }
+    .btn-cancel { padding:9px 18px;border:var(--border-base);border-radius:var(--radius-md);background:var(--bg-base);font-size:var(--fs-sm);cursor:pointer; }
+    .empty-state { text-align:center;padding:var(--sp-xl);color:var(--text-muted); }
+    @media(max-width:900px){.sidebar{display:none;}.cohort-grid{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+<nav class="sidebar" role="navigation" aria-label="관리자 메뉴">
+  <div class="sidebar-logo">AI <span>DC</span></div>
+  <div class="nav-section-label">관리</div>
+  <a href="admin-dashboard.html" class="nav-item"><i class="ph ph-squares-four" aria-hidden="true"></i> 대시보드</a>
+  <a href="admin-users.html" class="nav-item"><i class="ph ph-user-list" aria-hidden="true"></i> 학습자 관리</a>
+  <a href="admin-cohorts.html" class="nav-item active" aria-current="page"><i class="ph ph-users" aria-hidden="true"></i> 코호트 관리</a>
+  <a href="admin-bulk-upload.html" class="nav-item"><i class="ph ph-upload-simple" aria-hidden="true"></i> CSV 일괄 등록</a>
+  <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;gap:var(--sp-sm)">
+      <div class="admin-avatar" id="adminInitial">관</div>
+      <div><div class="admin-name" id="adminName">관리자</div><div class="admin-role" id="adminRole">관리자</div></div>
+    </div>
+  </div>
+</nav>
+<main class="main-content" role="main">
+  <div class="page-header">
+    <div><div class="main-title">코호트 관리</div><div class="main-sub">기수·부서·고객사 단위로 학습자 그룹 관리</div></div>
+    <button class="btn-primary" onclick="openModal()" aria-label="코호트 생성">
+      <i class="ph ph-plus" aria-hidden="true"></i> 코호트 생성
+    </button>
+  </div>
+  <div class="cohort-grid" id="cohortGrid"><div class="empty-state">로딩 중...</div></div>
+</main>
+<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-label="코호트 생성/수정">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">코호트 생성</div>
+    <div class="form-group">
+      <label class="form-label" for="cohortName">코호트 이름 <span style="color:var(--comp-5)">*</span></label>
+      <input id="cohortName" class="form-input" type="text" placeholder="예: 2026 2분기 영업본부 팀장급" maxlength="100">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="cohortDesc">설명</label>
+      <input id="cohortDesc" class="form-input" type="text" placeholder="간단한 설명 (선택)" maxlength="200">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-primary" onclick="saveCohort()"><i class="ph ph-check" aria-hidden="true"></i> 저장</button>
+    </div>
+  </div>
+</div>
+<script>
+let cohorts=[],editId=null;
+(async()=>{
+  try{
+    const r=await fetch('/api/auth/me',{credentials:'include'});
+    if(!r.ok){location.href='login.html';return;}
+    const d=await r.json();
+    if(d.user.role!=='admin'&&d.user.role!=='supervisor'){location.href='dashboard.html';return;}
+    document.getElementById('adminName').textContent=d.user.name||'관리자';
+    document.getElementById('adminRole').textContent=d.user.role==='admin'?'관리자':'수퍼바이저';
+    document.getElementById('adminInitial').textContent=(d.user.name||'관')[0];
+  }catch(e){location.href='login.html';}
+})();
+async function load(){
+  try{
+    const r=await fetch('/api/admin/cohorts',{credentials:'include'});
+    if(!r.ok)return;
+    const d=await r.json();
+    cohorts=d.cohorts||d||[];
+    render();
+  }catch(e){}
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function render(){
+  const g=document.getElementById('cohortGrid');
+  if(!cohorts.length){g.innerHTML='<div class="empty-state">코호트가 없습니다. 코호트를 생성하세요.</div>';return;}
+  g.innerHTML='';
+  cohorts.forEach(c=>{
+    const created=c.created_at?new Date(c.created_at).toLocaleDateString('ko-KR'):'—';
+    g.insertAdjacentHTML('beforeend',`
+      <div class="cohort-card">
+        <div class="cohort-name">${esc(c.name)}</div>
+        <div class="cohort-desc">${esc(c.description||'')}</div>
+        <div class="cohort-stat">
+          <div class="stat-item"><div class="stat-val">${c.member_count||0}</div><div class="stat-label">학습자</div></div>
+          <div class="stat-item"><div class="stat-val" style="font-size:var(--fs-sm);color:var(--text-muted)">${created}</div><div class="stat-label">생성일</div></div>
+        </div>
+        <div class="cohort-actions">
+          <button class="btn-sm" onclick="openEdit('${c.id}')">편집</button>
+          <button class="btn-sm danger" onclick="deleteCohort('${c.id}','${esc(c.name)}')">삭제</button>
+        </div>
+      </div>`);
+  });
+}
+function openModal(){editId=null;document.getElementById('modalTitle').textContent='코호트 생성';document.getElementById('cohortName').value='';document.getElementById('cohortDesc').value='';document.getElementById('modalOverlay').classList.add('open');document.getElementById('cohortName').focus();}
+function openEdit(id){const c=cohorts.find(x=>x.id===id);if(!c)return;editId=id;document.getElementById('modalTitle').textContent='코호트 수정';document.getElementById('cohortName').value=c.name||'';document.getElementById('cohortDesc').value=c.description||'';document.getElementById('modalOverlay').classList.add('open');document.getElementById('cohortName').focus();}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');editId=null;}
+async function saveCohort(){
+  const name=document.getElementById('cohortName').value.trim();
+  if(!name)return alert('코호트 이름을 입력하세요.');
+  const desc=document.getElementById('cohortDesc').value.trim();
+  try{
+    const url=editId?`/api/admin/cohorts/${editId}`:'/api/admin/cohorts';
+    const method=editId?'PATCH':'POST';
+    await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify({name,description:desc}),credentials:'include'});
+    closeModal();load();
+  }catch(e){alert('저장 중 오류가 발생했습니다.');}
+}
+async function deleteCohort(id,name){
+  if(!confirm(`"${name}" 코호트를 삭제하시겠습니까?\n소속 학습자의 코호트 배정이 해제됩니다.`))return;
+  try{await fetch(`/api/admin/cohorts/${id}`,{method:'DELETE',credentials:'include'});load();}catch(e){}
+}
+document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+load();
+</script>
+</body>
+</html>

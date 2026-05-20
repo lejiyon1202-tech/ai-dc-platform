@@ -119,14 +119,17 @@
   <div class="sidebar-logo">AI <span>DC</span></div>
 
   <div class="nav-section-label">관리</div>
-  <a href="#" class="nav-item active" aria-current="page">
+  <a href="admin-dashboard.html" class="nav-item active" aria-current="page">
     <i class="ph ph-squares-four" aria-hidden="true"></i> 대시보드
   </a>
-  <a href="#" class="nav-item">
+  <a href="admin-users.html" class="nav-item">
+    <i class="ph ph-user-list" aria-hidden="true"></i> 학습자 관리
+  </a>
+  <a href="admin-cohorts.html" class="nav-item">
     <i class="ph ph-users" aria-hidden="true"></i> 코호트 관리
   </a>
-  <a href="#" class="nav-item">
-    <i class="ph ph-play-circle" aria-hidden="true"></i> 시뮬 설정
+  <a href="admin-bulk-upload.html" class="nav-item">
+    <i class="ph ph-upload-simple" aria-hidden="true"></i> CSV 일괄 등록
   </a>
 
   <div class="nav-section-label">분석</div>
@@ -147,10 +150,10 @@
 
   <div class="sidebar-footer">
     <div class="admin-user">
-      <div class="admin-avatar" aria-hidden="true">관</div>
+      <div class="admin-avatar" aria-hidden="true" id="adminInitial">관</div>
       <div>
-        <div class="admin-name">L&D 관리자</div>
-        <div class="admin-role">Hunet 교육팀</div>
+        <div class="admin-name" id="adminName">L&D 관리자</div>
+        <div class="admin-role" id="adminRole">관리자</div>
       </div>
     </div>
   </div>
@@ -205,6 +208,18 @@
 </main>
 
 <script>
+// 권한 가드
+(async()=>{
+  try{
+    const r=await fetch('/api/auth/me',{credentials:'include'});
+    if(!r.ok){location.href='login.html';return;}
+    const d=await r.json();
+    if(d.user.role!=='admin'&&d.user.role!=='supervisor'){location.href=`dashboard.html?u=${d.user.id}`;return;}
+    document.getElementById('adminName').textContent=d.user.name||'관리자';
+    document.getElementById('adminRole').textContent=d.user.role==='admin'?'관리자':'수퍼바이저';
+    document.getElementById('adminInitial').textContent=(d.user.name||'관')[0];
+  }catch(e){location.href='login.html';}
+})();
 const css = getComputedStyle(document.documentElement);
 const cv = k => css.getPropertyValue(k).trim();
 
@@ -275,6 +290,16 @@ simData.forEach(s => {
     </div>`);
 });
 
+// overview fetch — API 완성 후 mock 덮어씀
+(async()=>{
+  try{
+    const r=await fetch('/api/admin/stats/overview',{credentials:'include'});
+    if(!r.ok)return;
+    const d=await r.json();
+    const vals=[d.totalUsers!=null?d.totalUsers+'명':null,d.activeThisWeek!=null?d.activeThisWeek+'명':null,d.avgXp!=null?Math.round(d.avgXp).toLocaleString():null,d.totalSimCompleted!=null?d.totalSimCompleted+'건':null];
+    document.querySelectorAll('.kpi-val').forEach((el,i)=>{if(vals[i])el.textContent=vals[i];});
+  }catch(e){}
+})();
 /* 역량 평균 */
 const compData = [
   { name: '커뮤니케이션', avg: 72, colorVar: '--comp-5' },

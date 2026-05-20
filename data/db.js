@@ -1,4 +1,4 @@
-// data/db.js — AI DC Platform 사용자 DB (sql.js, pure-JS SQLite)
+// data/db.js — AI DC Platform DB (sql.js, pure-JS SQLite)
 import initSqlJs from 'sql.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -9,9 +9,9 @@ const DATA_DIR = join(__dirname, '..', 'data');
 mkdirSync(DATA_DIR, { recursive: true });
 const DB_PATH = join(DATA_DIR, 'users.db');
 
-let db;
+export let db;
 
-function persist() {
+export function persist() {
   writeFileSync(DB_PATH, Buffer.from(db.export()));
 }
 
@@ -34,10 +34,39 @@ export async function initDb() {
       is_active     INTEGER NOT NULL DEFAULT 1
     );
   `);
+
+  // 스키마 마이그레이션 (기존 DB 컬럼 추가)
+  for (const col of [
+    "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'learner'",
+    'ALTER TABLE users ADD COLUMN cohort_id TEXT',
+    'ALTER TABLE users ADD COLUMN deleted_at TEXT',
+  ]) { try { db.run(col); } catch {} }
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS cohorts (
+      id          TEXT PRIMARY KEY,
+      name        TEXT NOT NULL,
+      description TEXT,
+      created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+      created_by  TEXT REFERENCES users(id)
+    );
+  `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id          TEXT PRIMARY KEY,
+      actor_id    TEXT NOT NULL,
+      action      TEXT NOT NULL,
+      target_type TEXT,
+      target_id   TEXT,
+      payload     TEXT,
+      created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
+    );
+  `);
   persist();
 }
 
-function getRow(sql, params = []) {
+// ── 공통 헬퍼 ────────────────────────────────────────────────────
+export function queryRow(sql, params = []) {
   const stmt = db.prepare(sql);
   stmt.bind(params);
   const row = stmt.step() ? stmt.getAsObject() : null;
@@ -45,49 +74,49 @@ function getRow(sql, params = []) {
   return row;
 }
 
+export function queryAll(sql, params = []) {
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  const rows = [];
+  while (stmt.step()) rows.push(stmt.getAsObject());
+  stmt.free();
+  return rows;
+}
+
+// ── Auth 함수 ────────────────────────────────────────────────────
 export function createUser(id, email, passwordHash, name) {
-  db.run(
-    'INSERT INTO users (id,email,password_hash,name) VALUES (?,?,?,?)',
-    [id, email, passwordHash, name]
-  );
+  db.run('INSERT INTO users (id,email,password_hash,name) VALUES (?,?,?,?)',
+    [id, email, passwordHash, name]);
   persist();
   return getUserById(id);
 }
 
 export function getUserByEmail(email) {
-  return getRow('SELECT * FROM users WHERE lower(email)=lower(?)', [email]);
+  return queryRow('SELECT * FROM users WHERE lower(email)=lower(?)', [email]);
 }
 
 export function getUserById(id) {
-  return getRow('SELECT * FROM users WHERE id=?', [id]);
+  return queryRow('SELECT * FROM users WHERE id=?', [id]);
 }
 
 export function incrementFailedLogin(id) {
-  db.run(`
-    UPDATE users
-    SET failed_attempts = failed_attempts + 1,
-        locked_until = CASE
-          WHEN failed_attempts + 1 >= 5
-            THEN strftime('%Y-%m-%d %H:%M:%S','now','+30 minutes')
-          ELSE locked_until
-        END
-    WHERE id=?
-  `, [id]);
+  db.run(`UPDATE users SET failed_attempts=failed_attempts+1,
+    locked_until=CASE WHEN failed_attempts+1>=5
+      THEN strftime('%Y-%m-%d %H:%M:%S','now','+30 minutes') ELSE locked_until END
+    WHERE id=?`, [id]);
   persist();
 }
 
 export function resetFailedLogin(id) {
-  db.run(
-    "UPDATE users SET failed_attempts=0, locked_until=NULL, last_login=strftime('%Y-%m-%d %H:%M:%S','now') WHERE id=?",
-    [id]
-  );
+  db.run("UPDATE users SET failed_attempts=0,locked_until=NULL,last_login=strftime('%Y-%m-%d %H:%M:%S','now') WHERE id=?",
+    [id]);
   persist();
 }
 
 export function purgeInvalidNames() {
   const stmt = db.prepare("DELETE FROM users WHERE name LIKE '%<%' OR name LIKE '%>%'");
   stmt.run();
-  const changed = db.exec("SELECT changes() AS n")[0]?.values?.[0]?.[0] ?? 0;
+  const changed = db.exec('SELECT changes() AS n')[0]?.values?.[0]?.[0] ?? 0;
   stmt.free();
   if (changed > 0) persist();
   return changed;

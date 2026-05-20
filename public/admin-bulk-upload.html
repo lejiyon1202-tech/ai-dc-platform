@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — CSV 일괄 등록</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { padding:0;margin:0;display:flex;min-height:100vh; }
+    .sidebar { width:220px;flex-shrink:0;background:var(--bg-card);border-right:var(--border-base);padding:var(--sp-lg) var(--sp-md);display:flex;flex-direction:column;box-shadow:var(--shadow-sm); }
+    .sidebar-logo { font-size:var(--fs-md);font-weight:var(--fw-bold);color:var(--accent);margin-bottom:var(--sp-xl);padding:0 var(--sp-sm); }
+    .sidebar-logo span { color:var(--text-primary); }
+    .nav-item { display:flex;align-items:center;gap:10px;padding:9px var(--sp-sm);border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text-secondary);cursor:pointer;transition:background var(--transition),color var(--transition);text-decoration:none; }
+    .nav-item:hover { background:var(--bg-base);color:var(--text-primary); }
+    .nav-item.active { background:var(--accent-dim);color:var(--accent);font-weight:var(--fw-medium); }
+    .nav-item i { font-size:18px;flex-shrink:0; }
+    .nav-section-label { font-size:var(--fs-xs);font-weight:var(--fw-medium);color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;padding:0 var(--sp-sm);margin-bottom:6px;margin-top:var(--sp-md); }
+    .sidebar-footer { margin-top:auto;padding:var(--sp-md) var(--sp-sm) 0;border-top:var(--border-base); }
+    .admin-avatar { width:32px;height:32px;border-radius:50%;background:var(--accent-dim);border:var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:var(--fw-bold);color:var(--accent); }
+    .main-content { flex:1;padding:var(--sp-xl) var(--sp-lg);overflow-y:auto;max-width:760px; }
+    .main-title { font-size:var(--fs-xl);font-weight:var(--fw-bold);margin-bottom:4px; }
+    .main-sub { font-size:var(--fs-sm);color:var(--text-secondary);margin-bottom:var(--sp-xl); }
+    .drop-zone { border:2px dashed var(--border-base);border-radius:var(--radius-lg);padding:var(--sp-xl) var(--sp-lg);text-align:center;background:var(--bg-card);cursor:pointer;transition:border-color var(--transition),background var(--transition);margin-bottom:var(--sp-lg); }
+    .drop-zone:hover,.drop-zone.drag-over { border-color:var(--accent-border);background:var(--accent-dim); }
+    .drop-icon { font-size:40px;color:var(--text-muted);margin-bottom:var(--sp-md); }
+    .drop-text { font-size:var(--fs-base);font-weight:var(--fw-medium);margin-bottom:4px; }
+    .drop-sub { font-size:var(--fs-sm);color:var(--text-muted);margin-bottom:var(--sp-md); }
+    .btn-file { padding:9px 20px;background:var(--accent);color:var(--text-on-accent);border:none;border-radius:var(--radius-md);font-size:var(--fs-sm);font-weight:var(--fw-bold);cursor:pointer;transition:opacity var(--transition); }
+    .btn-file:hover { opacity:0.88; }
+    .guide-card { background:var(--bg-card);border:var(--border-base);border-radius:var(--radius-lg);padding:var(--sp-lg);margin-bottom:var(--sp-lg);box-shadow:var(--shadow-sm); }
+    .guide-title { font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:var(--sp-sm); }
+    .guide-code { background:var(--bg-base);border:var(--border-base);border-radius:var(--radius-sm);padding:var(--sp-sm) var(--sp-md);font-family:monospace;font-size:var(--fs-sm);color:var(--text-primary);margin-bottom:var(--sp-sm); }
+    .guide-note { font-size:var(--fs-xs);color:var(--text-muted);line-height:1.6; }
+    .result-card { background:var(--bg-card);border:var(--border-base);border-radius:var(--radius-lg);padding:var(--sp-lg);box-shadow:var(--shadow-card);display:none; }
+    .result-summary { display:flex;gap:var(--sp-lg);margin-bottom:var(--sp-md); }
+    .result-stat { text-align:center; }
+    .result-val { font-size:var(--fs-xl);font-weight:var(--fw-bold); }
+    .result-label { font-size:var(--fs-xs);color:var(--text-muted);margin-top:2px; }
+    .error-table { width:100%;border-collapse:collapse;margin-top:var(--sp-md); }
+    .error-table th { font-size:var(--fs-xs);color:var(--text-muted);text-align:left;padding:6px var(--sp-sm);border-bottom:var(--border-base); }
+    .error-table td { font-size:var(--fs-sm);padding:8px var(--sp-sm);border-bottom:var(--border-base); }
+    .progress-bar { height:6px;background:var(--track-bg);border-radius:var(--radius-pill);overflow:hidden;margin-bottom:var(--sp-md);display:none; }
+    .progress-fill { height:100%;background:var(--accent);border-radius:var(--radius-pill);transition:width 0.3s; }
+    @media(max-width:900px){.sidebar{display:none;}}
+  </style>
+</head>
+<body>
+<nav class="sidebar" role="navigation" aria-label="관리자 메뉴">
+  <div class="sidebar-logo">AI <span>DC</span></div>
+  <div class="nav-section-label">관리</div>
+  <a href="admin-dashboard.html" class="nav-item"><i class="ph ph-squares-four" aria-hidden="true"></i> 대시보드</a>
+  <a href="admin-users.html" class="nav-item"><i class="ph ph-user-list" aria-hidden="true"></i> 학습자 관리</a>
+  <a href="admin-cohorts.html" class="nav-item"><i class="ph ph-users" aria-hidden="true"></i> 코호트 관리</a>
+  <a href="admin-bulk-upload.html" class="nav-item active" aria-current="page"><i class="ph ph-upload-simple" aria-hidden="true"></i> CSV 일괄 등록</a>
+  <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;gap:var(--sp-sm)">
+      <div class="admin-avatar" id="adminInitial">관</div>
+      <div><div style="font-size:var(--fs-sm);font-weight:var(--fw-medium)" id="adminName">관리자</div><div style="font-size:var(--fs-xs);color:var(--text-muted)" id="adminRole">관리자</div></div>
+    </div>
+  </div>
+</nav>
+<main class="main-content" role="main">
+  <div class="main-title">CSV 일괄 등록</div>
+  <div class="main-sub">CSV 파일로 학습자를 대량 등록합니다. 최대 500명 · 최대 2MB</div>
+  <input type="file" id="fileInput" accept=".csv" style="display:none" aria-label="CSV 파일 선택">
+  <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="CSV 파일 업로드 영역">
+    <div class="drop-icon"><i class="ph ph-file-csv" aria-hidden="true"></i></div>
+    <div class="drop-text">CSV 파일을 드래그하거나 클릭하여 선택</div>
+    <div class="drop-sub" id="dropSub">지원 형식: .csv · 최대 2MB · UTF-8 인코딩</div>
+    <button class="btn-file" onclick="document.getElementById('fileInput').click()">파일 선택</button>
+  </div>
+  <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="guide-card">
+    <div class="guide-title">CSV 형식 안내</div>
+    <div class="guide-code">email,name,cohort_id<br>kim@company.com,김학습자,<br>lee@company.com,이학습자,cohort-uuid-here</div>
+    <div class="guide-note">
+      • 첫 줄은 헤더 (email·name 필수 / cohort_id 선택)<br>
+      • 중복 이메일은 자동 건너뜀 (skip) — 기존 계정 변경 없음<br>
+      • 임시 비밀번호는 자동 생성 후 결과에 표시됩니다<br>
+      • cohort_id는 코호트 관리 페이지에서 확인 가능
+    </div>
+  </div>
+  <div class="result-card" id="resultCard" role="region" aria-label="업로드 결과">
+    <div class="guide-title" style="margin-bottom:var(--sp-md)">업로드 결과</div>
+    <div class="result-summary" id="resultSummary"></div>
+    <div id="errorSection" style="display:none">
+      <div style="font-size:var(--fs-sm);font-weight:var(--fw-bold);margin-bottom:var(--sp-sm);color:var(--comp-5)">오류 항목</div>
+      <table class="error-table" aria-label="오류 목록">
+        <thead><tr><th>행</th><th>이메일</th><th>사유</th></tr></thead>
+        <tbody id="errorTable"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<script>
+(async()=>{
+  try{
+    const r=await fetch('/api/auth/me',{credentials:'include'});
+    if(!r.ok){location.href='login.html';return;}
+    const d=await r.json();
+    if(d.user.role!=='admin'&&d.user.role!=='supervisor'){location.href='dashboard.html';return;}
+    document.getElementById('adminName').textContent=d.user.name||'관리자';
+    document.getElementById('adminRole').textContent=d.user.role==='admin'?'관리자':'수퍼바이저';
+    document.getElementById('adminInitial').textContent=(d.user.name||'관')[0];
+  }catch(e){location.href='login.html';}
+})();
+const dropZone=document.getElementById('dropZone');
+const fileInput=document.getElementById('fileInput');
+dropZone.addEventListener('click',()=>fileInput.click());
+dropZone.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')fileInput.click();});
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag-over');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)processFile(f);});
+fileInput.addEventListener('change',()=>{if(fileInput.files[0])processFile(fileInput.files[0]);});
+async function processFile(file){
+  if(!file.name.endsWith('.csv')){alert('CSV 파일만 업로드 가능합니다.');return;}
+  if(file.size>2*1024*1024){alert('파일 크기는 2MB 이하여야 합니다.');return;}
+  document.getElementById('dropSub').textContent=file.name+' ('+Math.round(file.size/1024)+'KB)';
+  const pb=document.getElementById('progressBar');pb.style.display='block';
+  document.getElementById('progressFill').style.width='30%';
+  const form=new FormData();form.append('file',file);
+  try{
+    document.getElementById('progressFill').style.width='60%';
+    const r=await fetch('/api/admin/users/bulk',{method:'POST',body:form,credentials:'include'});
+    document.getElementById('progressFill').style.width='100%';
+    const d=await r.json();
+    setTimeout(()=>{pb.style.display='none';showResult(d);},400);
+  }catch(e){pb.style.display='none';alert('업로드 중 오류가 발생했습니다.');}
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function showResult(d){
+  const rc=document.getElementById('resultCard');rc.style.display='block';
+  const success=d.created||0,skipped=d.skipped||0,errors=(d.errors||[]).length;
+  document.getElementById('resultSummary').innerHTML=`
+    <div class="result-stat"><div class="result-val" style="color:var(--comp-3)">${success}</div><div class="result-label">등록 완료</div></div>
+    <div class="result-stat"><div class="result-val" style="color:var(--text-muted)">${skipped}</div><div class="result-label">중복 건너뜀</div></div>
+    <div class="result-stat"><div class="result-val" style="color:var(--comp-5)">${errors}</div><div class="result-label">오류</div></div>`;
+  const es=document.getElementById('errorSection');
+  if(d.errors&&d.errors.length){
+    es.style.display='block';
+    const et=document.getElementById('errorTable');et.innerHTML='';
+    d.errors.forEach(e=>{et.insertAdjacentHTML('beforeend',`<tr><td style="color:var(--text-muted)">${esc(e.row||'—')}</td><td>${esc(e.email||'—')}</td><td style="color:var(--comp-5)">${esc(e.reason||'—')}</td></tr>`);});
+  }else{es.style.display='none';}
+  rc.scrollIntoView({behavior:'smooth',block:'start'});
+}
+</script>
+</body>
+</html>
