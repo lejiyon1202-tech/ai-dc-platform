@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — 회원가입</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: var(--sp-lg); }
+    .signup-wrap { display: flex; width: 100%; max-width: 900px; min-height: 580px; background: var(--bg-card); border: var(--border-base); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); overflow: hidden; }
+    .brand-panel { flex: 1; background: linear-gradient(160deg, rgba(184,146,58,0.12) 0%, rgba(37,99,235,0.06) 100%); border-right: var(--border-base); padding: var(--sp-xl); display: flex; flex-direction: column; justify-content: space-between; }
+    .brand-logo { font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--accent); letter-spacing: -0.02em; }
+    .brand-logo span { color: var(--text-primary); }
+    .brand-tagline { font-size: var(--fs-lg); font-weight: var(--fw-bold); line-height: 1.3; color: var(--text-primary); margin-bottom: var(--sp-md); }
+    .brand-tagline em { color: var(--accent); font-style: normal; }
+    .brand-desc { font-size: var(--fs-sm); color: var(--text-secondary); line-height: 1.7; margin-bottom: var(--sp-xl); }
+    .brand-features { display: flex; flex-direction: column; gap: var(--sp-sm); }
+    .brand-feature { display: flex; align-items: center; gap: var(--sp-sm); font-size: var(--fs-sm); color: var(--text-secondary); }
+    .feature-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .form-panel { width: 400px; flex-shrink: 0; padding: var(--sp-xl); display: flex; flex-direction: column; justify-content: center; overflow-y: auto; }
+    .form-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); margin-bottom: 4px; }
+    .form-sub   { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--sp-lg); }
+    .form-group { margin-bottom: var(--sp-md); }
+    .form-label { display: block; font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text-primary); margin-bottom: 6px; }
+    .form-input { width: 100%; padding: 10px 14px; border: var(--border-base); border-radius: var(--radius-md); background: var(--bg-base); color: var(--text-primary); font-size: var(--fs-base); font-family: var(--font-base); box-sizing: border-box; transition: border-color var(--transition), box-shadow var(--transition); }
+    .form-input:focus { outline: none; border-color: var(--accent-border); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .form-input::placeholder { color: var(--text-muted); }
+    .form-input.invalid { border-color: color-mix(in srgb, var(--comp-5) 60%, transparent); }
+    .pw-rules { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .pw-rule { display: flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--text-muted); padding: 3px 8px; border-radius: var(--radius-pill); background: var(--track-bg); transition: background var(--transition), color var(--transition); }
+    .pw-rule.ok { background: color-mix(in srgb, var(--comp-3) 12%, transparent); color: var(--comp-3); }
+    .pw-rule i { font-size: 10px; }
+    .agree-wrap { display: flex; align-items: flex-start; gap: 10px; font-size: var(--fs-sm); color: var(--text-secondary); cursor: pointer; margin-bottom: var(--sp-lg); line-height: 1.5; }
+    .agree-wrap input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; accent-color: var(--accent); width: 15px; height: 15px; }
+    .agree-wrap a { color: var(--accent); text-decoration: none; }
+    .agree-wrap a:hover { text-decoration: underline; }
+    .btn-signup { width: 100%; padding: 12px; background: var(--accent); color: var(--text-on-accent); border: none; border-radius: var(--radius-md); font-size: var(--fs-base); font-weight: var(--fw-bold); cursor: pointer; box-shadow: 0 4px 12px rgba(184,146,58,0.3); transition: opacity var(--transition), transform var(--transition); margin-bottom: var(--sp-md); }
+    .btn-signup:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .btn-signup:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .error-msg { display: none; padding: 10px 14px; background: color-mix(in srgb, var(--comp-5) 10%, transparent); border: 1px solid color-mix(in srgb, var(--comp-5) 30%, transparent); border-radius: var(--radius-md); font-size: var(--fs-sm); color: var(--comp-5); margin-bottom: var(--sp-md); }
+    .form-footer { text-align: center; font-size: var(--fs-xs); color: var(--text-muted); }
+    .form-footer a { color: var(--accent); text-decoration: none; }
+    .form-footer a:hover { text-decoration: underline; }
+    @media (max-width: 720px) { .brand-panel { display: none; } .form-panel { width: 100%; } .signup-wrap { max-width: 440px; } }
+  </style>
+</head>
+<body>
+
+<div class="signup-wrap" role="main">
+
+  <div class="brand-panel" aria-hidden="true">
+    <div>
+      <div class="brand-logo">AI <span>DC</span></div>
+    </div>
+    <div>
+      <div class="brand-tagline">지금 시작하는<br><em>역량 성장 여정</em></div>
+      <div class="brand-desc">계정을 만들고 AI 시뮬레이션으로<br>12역량 개발을 시작하세요.</div>
+      <div class="brand-features">
+        <div class="brand-feature"><div class="feature-dot"></div><span>AI In-Basket · Role-Playing · Presentation · GD</span></div>
+        <div class="brand-feature"><div class="feature-dot"></div><span>실시간 AI 피드백 + 12역량 XP 시스템</span></div>
+        <div class="brand-feature"><div class="feature-dot"></div><span>동료 코호트 함께 성장하는 여정</span></div>
+      </div>
+    </div>
+    <div style="font-size:var(--fs-xs);color:var(--text-muted)">Development Center · Hunet</div>
+  </div>
+
+  <div class="form-panel">
+    <div class="form-title">회원가입</div>
+    <div class="form-sub">AI DC 학습 계정을 만드세요</div>
+
+    <div id="errorMsg" class="error-msg" role="alert" aria-live="polite"></div>
+
+    <form id="signupForm" novalidate aria-label="회원가입 폼">
+      <div class="form-group">
+        <label class="form-label" for="name">이름</label>
+        <input id="name" class="form-input" type="text" name="name" placeholder="이름 입력" autocomplete="name" required aria-required="true" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">이메일</label>
+        <input id="email" class="form-input" type="email" name="email" placeholder="이메일 주소 입력" autocomplete="email" required aria-required="true" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">비밀번호</label>
+        <input id="password" class="form-input" type="password" name="password" placeholder="비밀번호 입력" autocomplete="new-password" required aria-required="true" aria-describedby="pwRules" />
+        <div class="pw-rules" id="pwRules" role="status" aria-label="비밀번호 조건">
+          <span class="pw-rule" id="r-len"><i class="ph ph-x-circle"></i>8자 이상</span>
+          <span class="pw-rule" id="r-upper"><i class="ph ph-x-circle"></i>대문자</span>
+          <span class="pw-rule" id="r-lower"><i class="ph ph-x-circle"></i>소문자</span>
+          <span class="pw-rule" id="r-num"><i class="ph ph-x-circle"></i>숫자</span>
+          <span class="pw-rule" id="r-special"><i class="ph ph-x-circle"></i>특수문자</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="passwordConfirm">비밀번호 확인</label>
+        <input id="passwordConfirm" class="form-input" type="password" name="passwordConfirm" placeholder="비밀번호 재입력" autocomplete="new-password" required aria-required="true" />
+      </div>
+      <label class="agree-wrap">
+        <input type="checkbox" id="agreePrivacy" name="agreePrivacy" aria-required="true" />
+        <span><a href="#" onclick="return false" aria-label="개인정보 처리방침 보기">개인정보 처리방침</a> 및 <a href="#" onclick="return false" aria-label="이용약관 보기">이용약관</a>에 동의합니다.</span>
+      </label>
+      <button type="submit" id="submitBtn" class="btn-signup" disabled aria-label="회원가입">회원가입</button>
+    </form>
+
+    <div class="form-footer">
+      이미 계정이 있으신가요? <a href="login.html" aria-label="로그인 페이지로 이동">로그인</a>
+      <br>계정 문의: <a href="mailto:academy@hunet.co.kr">academy@hunet.co.kr</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(async()=>{
+  try{
+    const r=await fetch('/api/auth/me');
+    if(r.ok){const d=await r.json();location.href=`dashboard.html?u=${d.user.id}`;}
+  }catch(e){}
+})();
+const pwInput=document.getElementById('password');
+const pwConfirm=document.getElementById('passwordConfirm');
+const agreeChk=document.getElementById('agreePrivacy');
+const submitBtn=document.getElementById('submitBtn');
+const rules={len:/^.{8,}$/,upper:/[A-Z]/,lower:/[a-z]/,num:/[0-9]/,special:/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/};
+function setRule(id,ok){
+  const el=document.getElementById(id);
+  el.classList.toggle('ok',ok);
+  el.querySelector('i').className=ok?'ph ph-check-circle':'ph ph-x-circle';
+}
+function validate(){
+  const v=pwInput.value;
+  const ok={len:rules.len.test(v),upper:rules.upper.test(v),lower:rules.lower.test(v),num:rules.num.test(v),special:rules.special.test(v)};
+  setRule('r-len',ok.len);setRule('r-upper',ok.upper);setRule('r-lower',ok.lower);setRule('r-num',ok.num);setRule('r-special',ok.special);
+  const pwOk=Object.values(ok).every(Boolean);
+  const matchOk=pwConfirm.value===v&&v.length>0;
+  pwConfirm.classList.toggle('invalid',pwConfirm.value.length>0&&!matchOk);
+  submitBtn.disabled=!(pwOk&&matchOk&&agreeChk.checked&&document.getElementById('name').value.trim()&&document.getElementById('email').value.trim());
+}
+pwInput.addEventListener('input',validate);
+pwConfirm.addEventListener('input',validate);
+agreeChk.addEventListener('change',validate);
+document.getElementById('name').addEventListener('input',validate);
+document.getElementById('email').addEventListener('input',validate);
+document.getElementById('signupForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const err=document.getElementById('errorMsg');
+  err.style.display='none';
+  submitBtn.disabled=true;
+  submitBtn.textContent='처리 중...';
+  const body={name:document.getElementById('name').value.trim(),email:document.getElementById('email').value.trim(),password:pwInput.value};
+  try{
+    const r=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
+    const d=await r.json();
+    if(r.ok){location.href=`dashboard.html?u=${d.user.id}`;}
+    else{err.textContent=d.error||'회원가입에 실패했습니다.';err.style.display='block';submitBtn.disabled=false;submitBtn.textContent='회원가입';}
+  }catch(e2){err.textContent='서버 연결 오류가 발생했습니다.';err.style.display='block';submitBtn.disabled=false;submitBtn.textContent='회원가입';}
+});
+</script>
+</body>
+</html>

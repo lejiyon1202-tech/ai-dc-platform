@@ -2,13 +2,19 @@
   "name": "ai-dc-platform",
   "version": "1.0.0",
   "type": "module",
-  "description": "AI DC Platform — 게이미피케이션 UI 정적 서버",
+  "description": "AI DC Platform — 게이미피케이션 UI + 인증 서버",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
     "dotenv": "^16.0.0",
-    "express": "^4.18.0"
+    "express": "^4.18.0",
+    "express-rate-limit": "^7.2.0",
+    "helmet": "^7.1.0",
+    "sql.js": "^1.12.0",
+    "uuid": "^9.0.1"
   }
 }
