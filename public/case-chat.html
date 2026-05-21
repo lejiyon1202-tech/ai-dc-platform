@@ -85,6 +85,12 @@
       <div class="chip" data-val="의사결정·우선순위">의사결정·우선순위</div><div class="chip" data-val="팀원 코칭·육성">팀원 코칭·육성</div><div class="chip" data-val="갈등·관계 조율">갈등·관계 조율</div><div class="chip" data-val="이해관계자 관리">이해관계자 관리</div><div class="chip" data-val="시간·자원 관리">시간·자원 관리</div>
     </div>
   </div>
+  <div class="setup-field">
+    <label class="field-label">학습 목표</label>
+    <div class="chip-group" data-field="learning_goal">
+      <div class="chip" data-val="약점 보완">약점 보완</div><div class="chip" data-val="강점 심화">강점 심화</div><div class="chip" data-val="승진 준비">승진 준비</div><div class="chip" data-val="실전 대비">실전 대비</div><div class="chip" data-val="탐색·파악">탐색·파악</div>
+    </div>
+  </div>
   <button class="btn-next" id="btnNext" disabled>다음 — AI와 케이스 만들기 <i class="ph ph-arrow-right"></i></button>
 </div>
 
@@ -115,7 +121,7 @@ document.querySelectorAll('.chip-group').forEach(g=>{
       g.querySelectorAll('.chip').forEach(x=>x.classList.remove('selected'));
       c.classList.add('selected');
       sel[g.dataset.field]=c.dataset.val;
-      document.getElementById('btnNext').disabled=Object.keys(sel).length<3;
+      document.getElementById('btnNext').disabled=Object.keys(sel).length<4;
     });
   });
 });
