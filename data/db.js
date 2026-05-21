@@ -78,12 +78,13 @@ export async function initDb() {
       updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
     );
   `);
-  // 기존 DB 마이그레이션 — 사전 선택 컬럼 추가
+  // 기존 DB 마이그레이션 — 사전 선택 컬럼 + 학습자 정보 컬럼 추가
   for (const col of [
     'ALTER TABLE cases ADD COLUMN role_level TEXT',
     'ALTER TABLE cases ADD COLUMN industry TEXT',
     'ALTER TABLE cases ADD COLUMN department TEXT',
     'ALTER TABLE cases ADD COLUMN challenge_area TEXT',
+    'ALTER TABLE cases ADD COLUMN learner_info TEXT',
   ]) { try { db.run(col); } catch {} }
   persist();
 }
@@ -137,14 +138,15 @@ export function resetFailedLogin(id) {
 }
 
 // ── Cases 함수 ───────────────────────────────────────────────────
-export function createCase(id, userId, simType = 'inbasket', preselect = {}) {
+export function createCase(id, userId, simType = 'inbasket', preselect = {}, learnerInfo = null) {
   db.run(
-    "INSERT INTO cases (id,user_id,sim_type,role_level,industry,department,challenge_area) VALUES (?,?,?,?,?,?,?)",
+    "INSERT INTO cases (id,user_id,sim_type,role_level,industry,department,challenge_area,learner_info) VALUES (?,?,?,?,?,?,?,?)",
     [id, userId, simType,
       preselect.role_level || null,
       preselect.industry || null,
       preselect.department || null,
       preselect.challenge_area || null,
+      learnerInfo ? JSON.stringify(learnerInfo) : null,
     ]
   );
   persist();

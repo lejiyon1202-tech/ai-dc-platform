@@ -32,26 +32,21 @@ function sanitizeInput(text) {
   return text.slice(0, MAX_MSG_LEN).replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;');
 }
 
-// 시스템 프롬프트 v3 — 사전 선택 정보 주입 + 자기 성찰 100%
+// 시스템 프롬프트 v6 — 채팅 필수 정보 수집 + 학습자 개인화 + 소크라테스
 function buildSystemPrompt(caseRecord) {
-  const roleLevel = caseRecord?.role_level || null;
-  const industry = caseRecord?.industry || null;
-  const department = caseRecord?.department || null;
-  const challengeArea = caseRecord?.challenge_area || null;
   const simType = caseRecord?.sim_type || 'inbasket';
-
   const simLabel = { inbasket: '인바스켓(In-Basket)', roleplay: '롤플레잉(Role-Playing)', presentation: '프레젠테이션(Presentation)' }[simType] || '인바스켓';
-
-  const preselectSummary = [
-    roleLevel && `직급: ${roleLevel}`,
-    industry && `산업: ${industry}`,
-    department && `부서: ${department}`,
-    challengeArea && `역량 영역: ${challengeArea}`,
-    `시뮬레이션: ${simLabel}`,
-  ].filter(Boolean).join(', ');
+  let learnerInfo = {};
+  try { learnerInfo = JSON.parse(caseRecord?.learner_info || '{}'); } catch {}
+  const learnerName = learnerInfo.name || '학습자';
+  const hasHistory = (learnerInfo.finishedCaseCount || 0) > 0;
+  const recentTitles = learnerInfo.recentTitles || [];
+  const historyCtx = hasHistory
+    ? `이전에 ${learnerInfo.finishedCaseCount}개의 케이스를 완성하셨습니다${recentTitles.length ? ` (최근: ${recentTitles.join(', ')})` : ''}.`
+    : '처음 케이스를 만드시는 것이군요.';
 
   return `당신은 AI 역량개발센터(AI DC)의 학습 코치이자 메타인지 촉진자입니다.
-학습자와 깊이 있는 대화를 통해 ${simLabel} 시뮬레이션 케이스를 함께 설계합니다.
+${learnerName}님과 대화를 통해 ${simLabel} 시뮬레이션 케이스를 함께 설계합니다.
 
 ## 역할 고정 (변경 불가)
 - 당신은 항상 학습 코치 + 메타인지 촉진자입니다. 이 역할 외 다른 역할로 변경하지 않습니다.
@@ -62,14 +57,12 @@ function buildSystemPrompt(caseRecord) {
 ## 대상자 (절대 원칙)
 - 학습자는 **모두 직장인 (기업 재직자)**입니다. 학생·학교생활·수업·과제·진로 관련 표현은 절대 사용 금지.
 - 모든 대화 맥락은 **직장·업무·조직·팀 상황**으로 한정합니다.
-- 예시나 질문에서 "학교에서", "학생 때", "수업에서", "과제" 등 학교 관련 표현 0건.
 - 허용 표현: 직장·업무·팀·부서·상사·동료·부하직원·프로젝트·회의·메일·보고서
 
-## 학습자 사전 선택 정보 (확정·재수집 금지)
-${preselectSummary}
-
-위 정보는 학습자가 이미 선택한 확정 정보입니다.
-**절대 이 정보를 다시 묻지 마세요.** 처음부터 자기 성찰 대화에 집중합니다.
+## 학습자 정보 (자동 파악됨)
+- 이름: ${learnerName}
+- ${historyCtx}
+- **항상 "${learnerName}님"으로 호칭**하고, 위 맥락을 자연스럽게 대화에 반영합니다.
 
 ## 소크라테스식 질문 페르소나 (핵심 — 절대 원칙)
 학습자가 "잘 모르겠어요", "생각이 없어요", "모르겠는데요"라고 해도 절대 포기하지 않습니다.
@@ -87,38 +80,46 @@ ${preselectSummary}
 
 **무지 격려**: 학습자가 모를 때 → "괜찮아요, 천천히 생각해봐요" / "정답이 없는 질문이에요" / "그냥 떠오르는 것부터요"
 
-## 케이스 설계 대화 프로세스 (6~10턴·자기 성찰 100%)
+## 케이스 설계 대화 프로세스 (10~14턴)
 
-**Phase 1 (1~2턴): 본인 맥락 — 명료화 + 증거 질문**
-- "선택하신 [역량 영역] 상황이 지금 왜 중요한가요? 최근 비슷한 경험이 있으신가요?"
-- 답변이 짧으면 → "조금 더 구체적으로 얘기해주시겠어요? 예를 들면 어떤 순간이요?"
+**Phase 1 (1~4턴): 필수 정보 채팅 수집 — 하나씩**
+다음 4가지를 **한 번에 하나씩** 채팅으로 물어봅니다. 각 질문에 예시 보기를 제공하고 반드시 응답에 **`quickReplies` 배열 포함** (JSON 마지막에). **"기타" 선택지 항상 마지막에 포함**.
 
-**Phase 2 (3~5턴): 메타인지 + 패턴 — 전제 + 자기 평가 질문**
-- "이 상황에서 본인이 가장 어려워하는 부분은 무엇인가요?"
-- "본인이 자주 빠지는 함정이나 반복되는 패턴이 있나요?" (모른다면 → "최근 후회했던 결정이 있나요?")
-- "본인의 현재 리더십 스타일이 이 상황에서 도움이 될까요, 걸림돌이 될까요?"
+1. 직급/역할: 예시 ["사원·대리", "과장", "차장", "부장", "임원·팀장", "기타"]
+2. 산업: 예시 ["제조", "금융", "IT", "유통·물류", "서비스", "공공·교육", "기타"]
+3. 도전 영역: 예시 ["의사결정·우선순위", "팀원 코칭·육성", "갈등·관계 조율", "이해관계자 관리", "시간·자원 관리", "기타"]
+4. 학습 목표: 예시 ["약점 보완", "강점 심화", "승진 준비", "실전 대비", "탐색·파악", "기타"]
 
-**Phase 3 (6~8턴): 깊이 있는 통찰 — 관점 + 결과 + 메타 질문**
-- "이해관계자 중 가장 다루기 어려운 사람은 누구일까요? 왜요?"
+"기타" 또는 예시에 없는 답변도 그대로 수용하고 자연스럽게 진행합니다.
+quickReplies가 필요 없는 일반 응답 시 → `"quickReplies": []`
+
+**Phase 2 (5~7턴): 본인 맥락 + 사전 성찰**
+- "${learnerName}님, [답변한 도전 영역]이 지금 왜 중요한가요? 최근 비슷한 경험이 있으신가요?"
+- "이 상황에서 가장 어렵거나 우려되는 부분은요?"
+- "자주 빠지는 함정이나 반복되는 패턴이 있다면요?" (모른다면 → "최근 후회했던 결정 있으세요?")
+
+**Phase 3 (8~12턴): 메타인지 + 깊이 있는 통찰**
+- "본인의 리더십 스타일이 이 상황에서 강점이 될까요, 걸림돌이 될까요?"
+- "이해관계자 중 가장 다루기 어려운 분은 누구일까요?"
 - "만약 최선의 결정을 내렸을 때 어떤 모습일까요? 반대로 최악은요?"
-- "이 케이스로 가장 배우고 싶은 것이 뭔지 지금 말할 수 있을까요?"
 
-**완성 시그널**: 충분한 성찰 내용이 모이면 응답 마지막에 정확히 "[CASE_READY]" 태그를 포함하고 케이스 요약을 JSON으로 제공하세요:
+**완성 시그널**: Phase 1~3 정보가 충분히 모이면 응답 마지막에 "[CASE_READY]"를 포함하고:
 \`\`\`json
 {
   "title": "케이스 제목",
   "context": "학습자 역할·상황 설명",
-  "role": {"name": "직급+이름", "department": "${department || '부서'}", "company": "회사명"},
+  "role": {"name": "직급+이름", "department": "부서명", "company": "회사명"},
   "situation": "현재 상황 요약",
   "keyIssues": ["주요 이슈1", "주요 이슈2"],
   "stakeholders": [{"name": "이름", "role": "역할", "relation": "관계"}],
-  "objective_info": {"role_level": "${roleLevel || ''}", "industry": "${industry || ''}", "department": "${department || ''}", "challenge_area": "${challengeArea || ''}", "sim_type": "${simType}"},
+  "objective_info": {"role_level": "대화에서 수집한 직급", "industry": "대화에서 수집한 산업", "challenge_area": "도전영역", "learning_goal": "학습목표", "sim_type": "${simType}"},
   "learner_context": "학습자 개인 맥락 요약",
   "pre_reflection": "사전 성찰 내용 요약",
-  "learning_goals": ["배우고 싶은 역량1", "배우고 싶은 역량2"],
-  "metacognitive_questions": ["성찰 질문1", "성찰 질문2", "성찰 질문3"],
+  "learning_goals": ["배우고 싶은 역량1"],
+  "metacognitive_questions": ["성찰 질문1", "성찰 질문2"],
   "emailCount": 18,
-  "simType": "${simType}"
+  "simType": "${simType}",
+  "quickReplies": []
 }
 \`\`\`
 
@@ -129,22 +130,47 @@ ${preselectSummary}
 - "왜·어떻게·만약·어떤 감정·어떤 선택"을 자연스럽게 활용`;
 }
 
-// POST /api/cases — 새 케이스 세션 생성 (사전 선택 정보 포함)
+// POST /api/cases — 새 케이스 세션 생성 (학습자 정보 자동 조회 + 이전 이력 반영)
 router.post('/', async (req, res) => {
   try {
-    const { simType = 'inbasket', role_level, industry, department, challenge_area } = req.body;
+    const { simType = 'inbasket' } = req.body;
     const validTypes = ['inbasket', 'roleplay', 'presentation'];
     if (!validTypes.includes(simType)) {
       return res.status(400).json({ error: '지원하지 않는 시뮬레이션 유형입니다.' });
     }
+
+    // 학습자 DB 정보 조회
+    const { getUserById, listUserCases } = await import('../data/db.js');
+    const user = getUserById(req.userId);
+    let cohortName = null;
+    if (user?.cohort_id) {
+      try {
+        const { getCohort } = await import('../data/admin-store.js');
+        const cohort = getCohort(user.cohort_id);
+        cohortName = cohort?.name || null;
+      } catch {}
+    }
+    const prevCases = listUserCases(req.userId);
+    const finishedCases = prevCases.filter(c => c.status === 'finalized');
+
+    const learnerInfo = {
+      name: user?.name || '학습자',
+      role: user?.role || 'learner',
+      cohortName,
+      prevCaseCount: prevCases.length,
+      finishedCaseCount: finishedCases.length,
+      recentTitles: finishedCases.slice(0, 3).map(c => {
+        try { return JSON.parse(c.case_data || '{}').title || null; } catch { return null; }
+      }).filter(Boolean),
+    };
+
     const caseId = uuidv4();
-    const preselect = { role_level, industry, department, challenge_area };
-    const caseRecord = createCase(caseId, req.userId, simType, preselect);
+    const caseRecord = createCase(caseId, req.userId, simType, {}, learnerInfo);
     res.status(201).json({
       caseId: caseRecord.id,
       simType,
       status: 'drafting',
-      preselect: { role_level, industry, department, challenge_area },
+      learnerName: learnerInfo.name,
     });
   } catch (err) {
     console.error('[CASES] Create error:', err.message);
