@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import jwt from 'jsonwebtoken';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import {
@@ -212,6 +213,21 @@ app.get('/api/auth/me', authRequired, (req, res) => {
   const user = getUserById(req.userId);
   if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
   res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role ?? 'learner' } });
+});
+
+// POST /api/auth/iframe-token — 솔루션 iframe 진입용 단기 JWT 발급 (10분)
+app.post('/api/auth/iframe-token', authRequired, (req, res) => {
+  const secret = process.env.SIM_JWT_SECRET;
+  if (!secret) return res.status(500).json({ error: 'SIM_JWT_SECRET 미설정' });
+  const user = getUserById(req.userId);
+  if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+  const { simId } = req.body;
+  const token = jwt.sign(
+    { userId: user.id, name: user.name, role: user.role ?? 'learner', sim: simId ?? null },
+    secret,
+    { algorithm: 'HS256', expiresIn: '10m' }
+  );
+  res.json({ token });
 });
 
 // ── Admin Routes ─────────────────────────────────────────────────
