@@ -447,12 +447,14 @@ router.get('/:id', async (req, res) => {
     if (!isOwner && !isSimServer) return res.status(403).json({ error: '접근 권한이 없습니다.' });
 
     const caseData = caseRecord.case_data ? JSON.parse(caseRecord.case_data) : null;
+    const conversationHistory = JSON.parse(caseRecord.conversation_history || '[]');
     res.json({
       caseId: caseRecord.id,
       userId: caseRecord.user_id,
       simType: caseRecord.sim_type,
       status: caseRecord.status,
       caseData,
+      conversationHistory,
       createdAt: caseRecord.created_at,
     });
   } catch (err) {
