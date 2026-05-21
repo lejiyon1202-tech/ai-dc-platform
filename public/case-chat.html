@@ -45,7 +45,6 @@
     .qr-inline input::placeholder { color:var(--text-muted); }
     .qr-inline .qr-send { padding:8px 14px;border:none;border-radius:var(--radius-pill);background:var(--accent);color:var(--text-on-accent);font-size:var(--fs-sm);font-weight:var(--fw-medium);cursor:pointer;flex-shrink:0; }
     @keyframes fadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
-    .cc-input.hint-active { border-color:var(--accent-border); box-shadow:0 0 0 3px var(--accent-dim); }
 
     .cc-preview { margin:var(--sp-sm) var(--sp-lg);background:var(--bg-card);border:var(--border-accent);border-radius:var(--radius-lg);padding:var(--sp-md) var(--sp-lg);box-shadow:var(--shadow-glow);display:none;flex-shrink:0; }
     .preview-title { font-size:var(--fs-xs);font-weight:var(--fw-medium);color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--sp-sm); }
@@ -90,7 +89,7 @@
 
 <script>
 const BASE='https://sbi.3.39.80.158.nip.io';
-const uid=new URLSearchParams(location.search).get('u')||'learner-demo';
+let uid=new URLSearchParams(location.search).get('u')||'';
 const msgs=document.getElementById('msgs');
 const input=document.getElementById('ccInput');
 const btnSend=document.getElementById('btnSend');
@@ -112,7 +111,7 @@ function stripJson(text){
 /* 세션 영속성 — localStorage 저장/복원 */
 function saveSession(){
   if(!window._caseId)return;
-  try{localStorage.setItem('aidc_s_'+uid,JSON.stringify({id:window._caseId,h:convHistory,s:step,q:qrStep}));}catch(e){}
+  try{localStorage.setItem('aidc_s_'+uid,JSON.stringify({id:window._caseId,h:convHistory,s:step,q:qrStep,cd:caseData}));}catch(e){}
 }
 function clearSession(){try{localStorage.removeItem('aidc_s_'+uid);}catch(e){}}
 
@@ -122,18 +121,31 @@ async function initChat(){
     if(raw){
       const sv=JSON.parse(raw);
       if(sv.id&&sv.h?.length){
+        // 서버에서 케이스 유효성 확인
+        const chk=await fetch(`/api/cases/${sv.id}`,{credentials:'include'});
+        if(!chk.ok){clearSession();await startChat();return;}
         window._caseId=sv.id;convHistory=sv.h;step=sv.s||0;qrStep=sv.q||0;
         updateProgress();
         sv.h.forEach(m=>{
           if(m.role==='user')addBubble('user',m.content);
           else addBubble('assistant',stripJson(m.content.replace('[CASE_READY]','')));
         });
-        addBubble('assistant','이전 대화를 이어서 진행합니다 😊');
-        if(qrStep<QR_STEPS.length)showQR(QR_STEPS[qrStep]);
-        btnSend.disabled=false;input.focus();return;
+        // 케이스 완성 복원
+        if(sv.cd){
+          caseData=sv.cd;step=STEPS-1;updateProgress();
+          preview.style.display='block';
+          document.getElementById('previewBody').textContent=typeof sv.cd==='string'?sv.cd:JSON.stringify(sv.cd,null,2);
+          btnSend.disabled=true;
+          addBubble('assistant','이전에 완성된 케이스입니다. InBasket으로 시작하거나 처음부터 다시 하실 수 있습니다. 😊');
+        }else{
+          addBubble('assistant','이전 대화를 이어서 진행합니다 😊');
+          if(qrStep<QR_STEPS.length)showQR(QR_STEPS[qrStep]);
+          btnSend.disabled=false;
+        }
+        input.focus();return;
       }
     }
-  }catch(e){}
+  }catch(e){clearSession();}
   await startChat();
 }
 
@@ -280,7 +292,7 @@ async function startChat(){
 }
 
 (async()=>{
-  try{const r=await fetch('/api/auth/me',{credentials:'include'});if(!r.ok){location.href='login.html';return;}const me=await r.json();if(!me.user){location.href='login.html';return;}learnerInfo.name=me.user.name||me.user.email||'학습자';learnerInfo.role=me.user.role||'learner';}catch(e){location.href='login.html';return;}
+  try{const r=await fetch('/api/auth/me',{credentials:'include'});if(!r.ok){location.href='login.html';return;}const me=await r.json();if(!me.user){location.href='login.html';return;}if(!uid)uid=me.user.id;learnerInfo.name=me.user.name||me.user.email||'학습자';learnerInfo.role=me.user.role||'learner';}catch(e){location.href='login.html';return;}
   try{const s=await(await fetch(`${BASE}/api/stats/learner/${uid}`)).json();learnerInfo.completedSims=s.completedSimulations||[];learnerInfo.xp=s.xp||0;learnerInfo.level=s.level||1;}catch(e){}
   await initChat();
 })();
