@@ -106,7 +106,10 @@ function showQR(chips){
   chips.forEach(v=>{
     const c=document.createElement('button');
     c.className='qr-chip';c.textContent=v;c.type='button';
-    c.onclick=()=>{input.value=v;input.style.height='auto';btnSend.disabled=false;input.focus();};
+    c.onclick=()=>{
+      if(v==='기타'){clearQR();input.value='';input.placeholder='직접 입력하세요...';btnSend.disabled=true;input.focus();}
+      else{input.value=v;input.style.height='auto';btnSend.disabled=false;input.focus();}
+    };
     qrArea.appendChild(c);
   });
 }
@@ -150,7 +153,8 @@ async function sendMessage(text){
     const clean=full.replace('[CASE_READY]','').trim();
     convHistory.push({role:'assistant',content:clean});
     step=Math.min(step+1,STEPS-1);updateProgress();
-    if(qrStep<QR_STEPS.length){showQR(QR_STEPS[qrStep]);qrStep++;}
+    const chips=finalData?.quickReplies||(qrStep<QR_STEPS.length?QR_STEPS[qrStep]:null);
+    if(chips){showQR(chips);if(!finalData?.quickReplies)qrStep++;}
     if(finalData?.caseReady&&finalData?.caseData){
       caseData=finalData.caseData;step=STEPS-1;updateProgress();clearQR();
       preview.style.display='block';document.getElementById('previewBody').textContent=typeof caseData==='string'?caseData:JSON.stringify(caseData,null,2);
