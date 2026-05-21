@@ -180,8 +180,13 @@ async function sendMessage(text){
         });msgs.scrollTop=msgs.scrollHeight;}
     }else{const d=await r.json();hideTyping();full=(d.reply||'').replace('[CASE_READY]','').trim();finalData=d;addBubble('assistant',full);}
     const clean=stripJson(full.replace('[CASE_READY]','').trim());
-    if(finalData?.cleanText&&streamBubble){streamBubble.innerHTML=finalData.cleanText.replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');}
-    convHistory.push({role:'assistant',content:clean});
+    /* 빈 버블 폴백: cleanText 우선, 없으면 clean, 둘 다 없으면 대기 메시지 */
+    if(streamBubble){
+      const display=finalData?.cleanText||clean||'응답을 처리하고 있습니다...';
+      if(!streamBubble.innerHTML.trim()||finalData?.cleanText)
+        streamBubble.innerHTML=display.replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+    }
+    convHistory.push({role:'assistant',content:finalData?.cleanText||clean});
     step=Math.min(step+1,STEPS-1);updateProgress();
     const chips=finalData?.quickReplies||(qrStep<QR_STEPS.length?QR_STEPS[qrStep]:null);
     if(chips){showQR(chips);if(!finalData?.quickReplies)qrStep++;}
