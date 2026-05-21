@@ -197,6 +197,7 @@
 </div>
 
 <script>
+(async()=>{try{const r=await fetch('/api/auth/me',{credentials:'include'});if(!r.ok)location.href='login.html';}catch(e){location.href='login.html';}})();
 const BASE='https://sbi.3.39.80.158.nip.io';
 const sp=new URLSearchParams(location.search);
 const uid=sp.get('u')||'learner-demo';

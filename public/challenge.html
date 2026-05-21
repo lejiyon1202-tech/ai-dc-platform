@@ -150,6 +150,7 @@
 <div class="ch-grid" id="chGrid"></div>
 
 <script>
+(async()=>{try{const r=await fetch('/api/auth/me',{credentials:'include'});if(!r.ok)location.href='login.html';}catch(e){location.href='login.html';}})();
 const BASE='https://sbi.3.39.80.158.nip.io';
 const uid=new URLSearchParams(location.search).get('u')||'learner-demo';
 [{label:'월',state:'done'},{label:'화',state:'done'},{label:'수',state:'today'},{label:'목',state:'future'},{label:'금',state:'future'}].forEach(d=>{

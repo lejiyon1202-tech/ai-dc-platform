@@ -158,6 +158,7 @@
 <div class="lb-list" id="lbList"></div>
 
 <script>
+(async()=>{try{const r=await fetch('/api/auth/me',{credentials:'include'});if(!r.ok)location.href='login.html';}catch(e){location.href='login.html';}})();
 const BASE='https://sbi.3.39.80.158.nip.io';
 const uid=new URLSearchParams(location.search).get('u')||'learner-demo';
 const css=getComputedStyle(document.documentElement);
