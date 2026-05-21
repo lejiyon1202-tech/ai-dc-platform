@@ -289,8 +289,27 @@ router.post('/:id/chat', async (req, res) => {
       }
     }
 
-    // 어시스턴트 응답 히스토리에 추가
-    history.push({ role: 'assistant', content: fullText });
+    // fullText에서 quickReplies JSON 블록 추출 + cleanText 분리
+    let quickReplies = [];
+    let cleanText = fullText;
+
+    // quickReplies 배열 추출 (```json 블록 또는 {"quickReplies":...} 패턴)
+    const qrJsonBlock = fullText.match(/```json\s*(\{[\s\S]*?"quickReplies"\s*:\s*\[[\s\S]*?\][\s\S]*?\})\s*```/);
+    const qrInline = fullText.match(/\{[^{}]*"quickReplies"\s*:\s*(\[[^\]]*\])[^{}]*\}/);
+    if (qrJsonBlock) {
+      try { quickReplies = JSON.parse(qrJsonBlock[1]).quickReplies || []; } catch {}
+      cleanText = cleanText.replace(qrJsonBlock[0], '').trim();
+    } else if (qrInline) {
+      try { quickReplies = JSON.parse(qrInline[1]) || []; } catch {}
+      cleanText = cleanText.replace(qrInline[0], '').trim();
+    }
+    // 남은 ```json ... ``` 블록도 제거 (CASE_READY JSON 제외 나머지)
+    cleanText = cleanText.replace(/```json[\s\S]*?```/g, (m) => {
+      return m.includes('[CASE_READY]') ? m : '';
+    }).trim();
+
+    // 어시스턴트 응답 히스토리에 추가 (cleanText로 저장)
+    history.push({ role: 'assistant', content: cleanText || fullText });
 
     // [CASE_READY] 감지 — case_data JSON 파싱 시도
     const caseReady = fullText.includes('[CASE_READY]');
@@ -308,6 +327,8 @@ router.post('/:id/chat', async (req, res) => {
       done: true,
       caseReady,
       caseData: caseReady ? caseData : null,
+      quickReplies,
+      cleanText,
       turnCount: Math.floor(history.length / 2),
     })}\n\n`);
     res.end();
