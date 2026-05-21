@@ -70,10 +70,21 @@ export async function initDb() {
       case_data            TEXT,
       sim_type             TEXT NOT NULL DEFAULT 'inbasket',
       status               TEXT NOT NULL DEFAULT 'drafting',
+      role_level           TEXT,
+      industry             TEXT,
+      department           TEXT,
+      challenge_area       TEXT,
       created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
       updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
     );
   `);
+  // 기존 DB 마이그레이션 — 사전 선택 컬럼 추가
+  for (const col of [
+    'ALTER TABLE cases ADD COLUMN role_level TEXT',
+    'ALTER TABLE cases ADD COLUMN industry TEXT',
+    'ALTER TABLE cases ADD COLUMN department TEXT',
+    'ALTER TABLE cases ADD COLUMN challenge_area TEXT',
+  ]) { try { db.run(col); } catch {} }
   persist();
 }
 
@@ -126,10 +137,15 @@ export function resetFailedLogin(id) {
 }
 
 // ── Cases 함수 ───────────────────────────────────────────────────
-export function createCase(id, userId, simType = 'inbasket') {
+export function createCase(id, userId, simType = 'inbasket', preselect = {}) {
   db.run(
-    "INSERT INTO cases (id,user_id,sim_type) VALUES (?,?,?)",
-    [id, userId, simType]
+    "INSERT INTO cases (id,user_id,sim_type,role_level,industry,department,challenge_area) VALUES (?,?,?,?,?,?,?)",
+    [id, userId, simType,
+      preselect.role_level || null,
+      preselect.industry || null,
+      preselect.department || null,
+      preselect.challenge_area || null,
+    ]
   );
   persist();
   return getCaseById(id);
