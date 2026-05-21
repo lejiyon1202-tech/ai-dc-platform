@@ -104,10 +104,15 @@
 </div>
 
 <script>
+function safeRedirect(userId){
+  const r=new URLSearchParams(location.search).get('redirect');
+  if(r&&r.startsWith('/')&&!r.startsWith('//')){return r;}
+  return `/dashboard.html?u=${userId}`;
+}
 (async()=>{
   try{
-    const r=await fetch('/api/auth/me');
-    if(r.ok){const d=await r.json();location.href=`dashboard.html?u=${d.user.id}`;}
+    const r=await fetch('/api/auth/me',{credentials:'include'});
+    if(r.ok){const d=await r.json();location.replace(safeRedirect(d.user.id));}
   }catch(e){}
 })();
 document.getElementById('loginForm').addEventListener('submit',async e=>{
@@ -118,7 +123,7 @@ document.getElementById('loginForm').addEventListener('submit',async e=>{
   try{
     const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
     const d=await r.json();
-    if(r.ok){location.href=`dashboard.html?u=${d.user.id}`;}
+    if(r.ok){location.replace(safeRedirect(d.user.id));}
     else{err.textContent=d.error||'로그인에 실패했습니다.';err.style.display='block';}
   }catch(e2){err.textContent='서버 연결 오류가 발생했습니다.';err.style.display='block';}
 });
