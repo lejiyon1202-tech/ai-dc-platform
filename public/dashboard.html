@@ -39,6 +39,15 @@
     .log-dot  { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
     .log-text { font-size:var(--fs-sm);color:var(--text-secondary);flex:1; }
     .log-xp   { font-size:var(--fs-sm);font-weight:var(--fw-bold);color:var(--accent); }
+    /* ── Sim Modal ── */
+    .sim-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;flex-direction:column; }
+    .sim-overlay.open { display:flex; }
+    .sim-modal-header { display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--bg-card);border-bottom:var(--border-base);flex-shrink:0; }
+    .sim-modal-title { font-size:var(--fs-base);font-weight:var(--fw-bold); }
+    .sim-modal-close { width:36px;height:36px;border:var(--border-base);border-radius:var(--radius-md);background:var(--bg-base);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text-secondary);transition:all var(--transition); }
+    .sim-modal-close:hover { border-color:var(--comp-5);color:var(--comp-5); }
+    .sim-iframe { flex:1;width:100%;border:none;background:var(--bg-base); }
+    .sim-loading { flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:var(--fs-sm); }
     @media(max-width:680px){.dash-grid{grid-template-columns:1fr;}.dash-col-wide{grid-column:span 1;}.sim-recommend{grid-template-columns:repeat(2,1fr);}}
   </style>
 </head>
@@ -69,7 +78,6 @@
       <a href="radar.html" style="font-size:var(--fs-xs);color:var(--text-secondary);text-decoration:none;margin-left:var(--sp-md)">레이더 차트 <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
     </div>
   </div>
-
   <div class="d-card" aria-label="이번 주 챌린지">
     <div class="d-card-title">
       <i class="ph ph-flag" aria-hidden="true"></i>이번 주 챌린지
@@ -78,7 +86,6 @@
     <div class="challenge-list" id="challengeList"></div>
     <a href="challenge.html" style="display:block;margin-top:var(--sp-md);font-size:var(--fs-xs);color:var(--accent);text-decoration:none">전체 챌린지 <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
   </div>
-
   <div class="d-card" aria-label="성장 여정 리더보드">
     <div class="d-card-title"><i class="ph ph-ranking" aria-hidden="true"></i>동료 성장 현황</div>
     <div style="display:flex;align-items:center;gap:var(--sp-md);margin-bottom:var(--sp-sm)">
@@ -87,12 +94,10 @@
     </div>
     <a href="leaderboard.html" style="font-size:var(--fs-xs);color:var(--accent);text-decoration:none">전체 순위 보기 <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
   </div>
-
   <div class="d-card dash-col-wide" aria-label="시뮬레이션 목록">
     <div class="d-card-title"><i class="ph ph-play-circle" aria-hidden="true"></i>AI 시뮬레이션</div>
     <div class="sim-recommend" id="simGrid"></div>
   </div>
-
   <div class="d-card" aria-label="최근 성장 기록">
     <div class="d-card-title"><i class="ph ph-clock-clockwise" aria-hidden="true"></i>최근 성장 기록</div>
     <div class="growth-log" id="growthLog"></div>
@@ -100,59 +105,68 @@
   </div>
 </main>
 
+<!-- Sim Modal -->
+<div class="sim-overlay" id="simOverlay" role="dialog" aria-modal="true" aria-label="시뮬레이션">
+  <div class="sim-modal-header">
+    <div class="sim-modal-title" id="simModalTitle">시뮬레이션</div>
+    <button class="sim-modal-close" onclick="closeSimModal()" aria-label="닫기"><i class="ph ph-x" aria-hidden="true"></i></button>
+  </div>
+  <div id="simLoadingMsg" class="sim-loading">시뮬레이션 로딩 중...</div>
+  <iframe id="simIframe" class="sim-iframe" style="display:none" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" title="AI 시뮬레이션" allowfullscreen></iframe>
+</div>
+
 <script>
 const BASE='https://sbi.3.39.80.158.nip.io';
 const uid=new URLSearchParams(location.search).get('u')||'learner-demo';
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const SIMS=[{name:'AI In-Basket',icon:'ph-tray',color:'var(--sim-inbasket)',id:'inbasket'},{name:'AI Role-Playing',icon:'ph-chats-circle',color:'var(--sim-roleplay)',id:'roleplay'},{name:'AI Presentation',icon:'ph-projector-screen',color:'var(--sim-pres)',id:'canvas'},{name:'AI GD',icon:'ph-users-three',color:'var(--sim-gd)',id:'gd'}];
+const SIMS=[{name:'AI In-Basket',icon:'ph-tray',color:'var(--sim-inbasket)',id:'inbasket',url:'https://inbasket.3.39.80.158.nip.io'},{name:'AI Role-Playing',icon:'ph-chats-circle',color:'var(--sim-roleplay)',id:'roleplay',url:'https://sbi.3.39.80.158.nip.io'},{name:'AI Presentation',icon:'ph-projector-screen',color:'var(--sim-pres)',id:'canvas',url:'https://pt.3.39.80.158.nip.io'},{name:'AI GD',icon:'ph-users-three',color:'var(--sim-gd)',id:'gd',url:'https://gd.3.39.80.158.nip.io'}];
+const SIM_ORIGINS=SIMS.map(s=>new URL(s.url).origin);
 const SIM_CHALLENGES=[{id:'inbasket',name:'AI In-Basket 완료',xp:80},{id:'roleplay',name:'AI Role-Playing 완료',xp:100},{id:'gd',name:'AI GD 완료',xp:120},{id:'canvas',name:'AI Presentation 완료',xp:90}];
-SIMS.forEach(s=>{document.getElementById('simGrid').insertAdjacentHTML('beforeend',`<div class="sim-mini" tabindex="0" role="button" aria-label="${s.name} 시작"><i class="ph ${s.icon} sim-mini-icon" style="color:${s.color}" aria-hidden="true"></i><div class="sim-mini-name">${s.name}</div></div>`);});
+SIMS.forEach(s=>{
+  const el=document.createElement('div');
+  el.className='sim-mini';el.tabIndex=0;el.role='button';el.setAttribute('aria-label',s.name+' 시작');
+  el.innerHTML=`<i class="ph ${s.icon} sim-mini-icon" style="color:${s.color}" aria-hidden="true"></i><div class="sim-mini-name">${s.name}</div>`;
+  el.onclick=()=>openSim(s);el.onkeydown=e=>{if(e.key==='Enter'||e.key===' ')openSim(s);};
+  document.getElementById('simGrid').appendChild(el);
+});
+async function openSim(s){
+  document.getElementById('simOverlay').classList.add('open');
+  document.getElementById('simModalTitle').textContent=s.name;
+  document.getElementById('simLoadingMsg').style.display='flex';
+  document.getElementById('simIframe').style.display='none';
+  document.body.style.overflow='hidden';
+  try{
+    const r=await fetch('/api/auth/iframe-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({simId:s.id}),credentials:'include'});
+    const d=await r.json();
+    const token=d.token||'';
+    const src=`${s.url}?u=${encodeURIComponent(uid)}${token?'&token='+encodeURIComponent(token):''}`;
+    const iframe=document.getElementById('simIframe');
+    iframe.src=src;iframe.style.display='block';
+    document.getElementById('simLoadingMsg').style.display='none';
+  }catch(e){
+    document.getElementById('simLoadingMsg').textContent='시뮬레이션을 불러올 수 없습니다. 잠시 후 다시 시도해주세요.';
+  }
+}
+function closeSimModal(){
+  document.getElementById('simOverlay').classList.remove('open');
+  document.getElementById('simIframe').src='';
+  document.body.style.overflow='';
+}
+window.addEventListener('message',e=>{
+  if(!SIM_ORIGINS.includes(e.origin))return;
+  if(e.data?.event==='completed'){renderChallenges([...(completedSims||[]),e.data.simId||'']);}
+  if(e.data?.event==='close')closeSimModal();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSimModal();});
+let completedSims=[];
 let logs=[{name:'학습을 시작하세요',comp:'성장',xp:0,color:'var(--accent)'}];
 function renderLogs(){const gl=document.getElementById('growthLog');gl.innerHTML='';logs.forEach(l=>{gl.insertAdjacentHTML('beforeend',`<div class="log-item"><div class="log-dot" style="background:${l.color}" aria-hidden="true"></div><div class="log-text">${esc(l.name)} <span style="color:var(--text-muted)">· ${esc(l.comp)}</span></div>${l.xp?`<div class="log-xp">+${l.xp} XP</div>`:''}</div>`);});}
-function renderChallenges(completed){
-  const cl=document.getElementById('challengeList');cl.innerHTML='';
-  const done=SIM_CHALLENGES.filter(c=>completed.includes(c.id)).length;
-  document.getElementById('challengeCount').textContent=`${done}/${SIM_CHALLENGES.length} 완료`;
-  SIM_CHALLENGES.forEach(c=>{
-    const isDone=completed.includes(c.id);
-    const color=isDone?'var(--comp-3)':'var(--accent)';
-    cl.insertAdjacentHTML('beforeend',`<div class="challenge-item"><div class="ch-status" style="background:${color}" aria-hidden="true"></div><div class="ch-info"><div class="ch-name">${c.name}</div><div class="ch-prog">${isDone?'완료':'미완료'}</div></div><div class="ch-xp">${isDone?'+'+c.xp+' XP':'진행 중'}</div></div>`);
-  });
-}
-renderChallenges([]);
-renderLogs();
+function renderChallenges(completed){completedSims=completed;const cl=document.getElementById('challengeList');cl.innerHTML='';const done=SIM_CHALLENGES.filter(c=>completed.includes(c.id)).length;document.getElementById('challengeCount').textContent=`${done}/${SIM_CHALLENGES.length} 완료`;SIM_CHALLENGES.forEach(c=>{const isDone=completed.includes(c.id);const color=isDone?'var(--comp-3)':'var(--accent)';cl.insertAdjacentHTML('beforeend',`<div class="challenge-item"><div class="ch-status" style="background:${color}" aria-hidden="true"></div><div class="ch-info"><div class="ch-name">${c.name}</div><div class="ch-prog">${isDone?'완료':'미완료'}</div></div><div class="ch-xp">${isDone?'+'+c.xp+' XP':'진행 중'}</div></div>`);});}
+renderChallenges([]);renderLogs();
 (async()=>{
-  try{
-    const me=await(await fetch('/api/auth/me',{credentials:'include'})).json();
-    if(!me.user){location.href='login.html';return;}
-    const name=me.user.name||me.user.email||'학습자';
-    document.getElementById('userGreeting').innerHTML=`안녕하세요, ${esc(name)}님 <i class="ph ph-hand-waving" aria-hidden="true" style="color:var(--accent)"></i>`;
-    document.getElementById('userSub').textContent='AI DC 학습을 시작하세요';
-  }catch(e){location.href='login.html';}
-  try{
-    const d=await(await fetch(`${BASE}/api/stats/learner/${uid}`)).json();
-    const xp=d.xp||0,level=d.level||1,nextXp=level*1000;
-    document.getElementById('xpTotal').textContent=xp.toLocaleString()+' XP';
-    document.getElementById('xpMax').textContent=`Lv.${level+1}까지 ${(nextXp-xp).toLocaleString()} XP 남음`;
-    document.getElementById('xpFill').style.width=Math.min((xp%1000)/10,100)+'%';
-    document.getElementById('xpNext').textContent=`다음 레벨: ${nextXp.toLocaleString()} XP`;
-    document.getElementById('levelText').textContent=`Lv.${level} 성장 중`;
-    renderChallenges(d.completedSimulations||[]);
-    if(d.recentStatements?.length)logs=d.recentStatements.slice(0,3).map(s=>({name:`${s.sim||''} ${s.verb||''}`.trim()||'학습 완료',comp:'성장',xp:s.score||10,color:'var(--accent)'}));
-    renderLogs();
-  }catch(e){requestAnimationFrame(()=>{document.getElementById('xpFill').style.width='0%';});}
-  try{
-    const c=await(await fetch(`${BASE}/api/stats/cohort/all`)).json();
-    const board=c.leaderboard||[];
-    const idx=board.findIndex(l=>l.userId===uid);
-    if(idx>=0){
-      const rank=idx+1,total=c.totalLearners||board.length;
-      const pct=Math.round((1-idx/Math.max(total-1,1))*100);
-      document.getElementById('rankVal').textContent=`${rank}위`;
-      document.getElementById('rankSub').textContent=`${total}명 중 상위 ${pct}%`;
-      document.getElementById('rankNote').textContent='leaderboard.html에서 전체 순위 확인';
-    }
-  }catch(e){}
+  try{const me=await(await fetch('/api/auth/me',{credentials:'include'})).json();if(!me.user){location.href='login.html';return;}const name=me.user.name||me.user.email||'학습자';document.getElementById('userGreeting').innerHTML=`안녕하세요, ${esc(name)}님 <i class="ph ph-hand-waving" aria-hidden="true" style="color:var(--accent)"></i>`;}catch(e){location.href='login.html';}
+  try{const d=await(await fetch(`${BASE}/api/stats/learner/${uid}`)).json();const xp=d.xp||0,level=d.level||1,nextXp=level*1000;document.getElementById('xpTotal').textContent=xp.toLocaleString()+' XP';document.getElementById('xpMax').textContent=`Lv.${level+1}까지 ${(nextXp-xp).toLocaleString()} XP 남음`;document.getElementById('xpFill').style.width=Math.min((xp%1000)/10,100)+'%';document.getElementById('xpNext').textContent=`다음 레벨: ${nextXp.toLocaleString()} XP`;document.getElementById('levelText').textContent=`Lv.${level} 성장 중`;renderChallenges(d.completedSimulations||[]);if(d.recentStatements?.length)logs=d.recentStatements.slice(0,3).map(s=>({name:`${s.sim||''} ${s.verb||''}`.trim()||'학습 완료',comp:'성장',xp:s.score||10,color:'var(--accent)'}));renderLogs();}catch(e){}
+  try{const c=await(await fetch(`${BASE}/api/stats/cohort/all`)).json();const board=c.leaderboard||[];const idx=board.findIndex(l=>l.userId===uid);if(idx>=0){const rank=idx+1,total=c.totalLearners||board.length;const pct=Math.round((1-idx/Math.max(total-1,1))*100);document.getElementById('rankVal').textContent=`${rank}위`;document.getElementById('rankSub').textContent=`${total}명 중 상위 ${pct}%`;document.getElementById('rankNote').textContent='leaderboard.html에서 전체 순위 확인';}}catch(e){}
 })();
 </script>
 </body>
