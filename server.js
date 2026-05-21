@@ -73,6 +73,11 @@ const authLimiter = rateLimit({
   standardHeaders: true, legacyHeaders: false,
   message: { error: '인증 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
 });
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60_000, max: 20,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: '회원가입 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+});
 const casesLimiter = rateLimit({
   windowMs: 15 * 60_000, max: 50,
   standardHeaders: true, legacyHeaders: false,
@@ -110,7 +115,7 @@ function authRequired(req, res, next) {
 // ── Auth Routes ──────────────────────────────────────────────────
 
 // POST /api/auth/register
-app.post('/api/auth/register', authLimiter, async (req, res) => {
+app.post('/api/auth/register', registerLimiter, async (req, res) => {
   try {
     const { email, name, password } = req.body;
     if (!email || !name || !password) {
