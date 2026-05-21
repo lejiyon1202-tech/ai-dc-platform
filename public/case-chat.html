@@ -50,7 +50,7 @@
   <button class="cc-back" onclick="history.back()" aria-label="뒤로가기"><i class="ph ph-arrow-left"></i></button>
   <div class="cc-title">케이스 만들기</div>
   <div class="progress-steps" id="progressSteps" aria-label="진행 단계">
-    <div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div>
+    <div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div>
   </div>
 </header>
 
@@ -80,7 +80,7 @@ const preview=document.getElementById('preview');
 let history=[];
 let caseData=null;
 let step=0;
-const STEPS=5;
+const STEPS=7;
 
 function updateProgress(){
   document.querySelectorAll('.step-dot').forEach((d,i)=>{
