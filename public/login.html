@@ -119,7 +119,7 @@ document.getElementById('loginForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const err=document.getElementById('errorMsg');
   err.style.display='none';
-  const body={email:document.getElementById('email').value,password:document.getElementById('password').value};
+  const body={email:document.getElementById('email').value,password:document.getElementById('password').value,remember:document.querySelector('[name="remember"]').checked};
   try{
     const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
     const d=await r.json();
