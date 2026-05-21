@@ -160,12 +160,34 @@ async function sendMessage(text){
   try{
     const endpoint=window._caseId?`/api/cases/${window._caseId}/chat`:'/api/cases/chat';
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,messages:convHistory,sessionId:uid,...sel}),credentials:'include'});
-    const d=await r.json();hideTyping();
-    const reply=d.reply||'';const clean=reply.replace('[CASE_READY]','').trim();
-    convHistory.push({role:'assistant',content:clean});addBubble('assistant',clean);
+    if(!r.ok){throw new Error('HTTP '+r.status);}
+    const ct=r.headers.get('content-type')||'';
+    if(ct.includes('event-stream')){
+      hideTyping();
+      const row=document.createElement('div');row.className='msg-row';
+      row.innerHTML=`<div class="msg-avatar ai" aria-hidden="true"><i class="ph ph-robot"></i></div><div class="msg-bubble ai" id="streamBubble"></div>`;
+      msgs.appendChild(row);
+      const bubble=document.getElementById('streamBubble');
+      const reader=r.body.getReader();const dec=new TextDecoder();let full='';let finalData=null;
+      while(true){const{done,value}=await reader.read();if(done)break;
+        dec.decode(value,{stream:true}).split('\n').forEach(line=>{
+          if(!line.startsWith('data: '))return;
+          try{const p=JSON.parse(line.slice(6));
+            if(p.chunk){full+=p.chunk;bubble.innerHTML=full.replace(/\[CASE_READY\]/g,'').replace(/\n/g,'<br>');}
+            if(p.done||p.reply||p.caseReady){finalData=p;}
+          }catch(e){}
+        });msgs.scrollTop=msgs.scrollHeight;}
+      const clean=full.replace('[CASE_READY]','').trim();
+      convHistory.push({role:'assistant',content:clean});
+      if(finalData?.caseReady&&finalData?.caseData){caseData=finalData.caseData;step=STEPS-1;preview.style.display='block';document.getElementById('previewBody').textContent=typeof caseData==='string'?caseData:JSON.stringify(caseData,null,2);msgs.scrollTop=msgs.scrollHeight;}
+    }else{
+      const d=await r.json();hideTyping();
+      const clean=(d.reply||'').replace('[CASE_READY]','').trim();
+      convHistory.push({role:'assistant',content:clean});addBubble('assistant',clean);
+      if(d.caseReady&&d.caseData){caseData=d.caseData;step=STEPS-1;preview.style.display='block';document.getElementById('previewBody').textContent=typeof caseData==='string'?caseData:JSON.stringify(caseData,null,2);msgs.scrollTop=msgs.scrollHeight;}
+    }
     step=Math.min(step+1,STEPS-1);
-    if(d.caseReady&&d.caseData){caseData=d.caseData;step=STEPS-1;preview.style.display='block';document.getElementById('previewBody').textContent=typeof caseData==='string'?caseData:JSON.stringify(caseData,null,2);msgs.scrollTop=msgs.scrollHeight;}
-  }catch(e){hideTyping();addBubble('assistant','죄송합니다. 잠시 후 다시 시도해주세요.');}
+  }catch(e){hideTyping();addBubble('assistant','죄송합니다. 잠시 후 다시 시도해주세요. ('+e.message+')');}
   input.disabled=false;input.value='';input.style.height='';
   if(!caseData)btnSend.disabled=false;input.focus();
 }
