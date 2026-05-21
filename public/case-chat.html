@@ -40,7 +40,10 @@
     .qr-row { display:flex;flex-wrap:wrap;gap:8px;padding-left:48px;margin-top:-6px; }
     .qr-chip { padding:6px 16px;border-radius:var(--radius-pill);border:var(--border-base);background:var(--bg-card);font-size:var(--fs-sm);cursor:pointer;transition:all var(--transition);color:var(--text-secondary); }
     .qr-chip:hover { border-color:var(--accent-border);color:var(--accent);background:var(--accent-dim); }
-    .qr-hint { padding:6px 48px; font-size:var(--fs-xs); color:var(--accent); display:flex; align-items:center; gap:6px; animation:fadeIn 0.2s; }
+    .qr-inline { display:flex;gap:8px;padding-left:48px;margin-top:4px;align-items:center; }
+    .qr-inline input { flex:1;padding:8px 14px;border:1.5px solid var(--accent-border);border-radius:var(--radius-pill);background:var(--bg-base);color:var(--text-primary);font-size:var(--fs-sm);font-family:var(--font-base);outline:none;box-shadow:0 0 0 3px var(--accent-dim);min-width:0; }
+    .qr-inline input::placeholder { color:var(--text-muted); }
+    .qr-inline .qr-send { padding:8px 14px;border:none;border-radius:var(--radius-pill);background:var(--accent);color:var(--text-on-accent);font-size:var(--fs-sm);font-weight:var(--fw-medium);cursor:pointer;flex-shrink:0; }
     @keyframes fadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
     .cc-input.hint-active { border-color:var(--accent-border); box-shadow:0 0 0 3px var(--accent-dim); }
 
@@ -120,7 +123,7 @@ function updateProgress(){
   });
 }
 
-function clearQR(){ document.getElementById('qrRow')?.remove(); document.getElementById('qrHint')?.remove(); input.classList.remove('hint-active'); }
+function clearQR(){ document.getElementById('qrRow')?.remove(); }
 
 function showQR(chips){
   clearQR();
@@ -133,13 +136,16 @@ function showQR(chips){
     c.onclick=()=>{
       if(v==='기타'){
         clearQR();
-        const hint=document.createElement('div');hint.className='qr-hint';hint.id='qrHint';
-        hint.innerHTML='<i class="ph ph-pencil-simple" aria-hidden="true"></i> 아래에 직접 입력해주세요';
-        msgs.appendChild(hint);msgs.scrollTop=msgs.scrollHeight;
-        input.value='';input.placeholder='자유롭게 입력하세요...';btnSend.disabled=true;
-        input.classList.add('hint-active');input.focus();
+        const inlineRow=document.createElement('div');inlineRow.className='qr-inline';inlineRow.id='qrRow';
+        const inp=document.createElement('input');inp.type='text';inp.placeholder='직접 입력하세요...';
+        const btn=document.createElement('button');btn.className='qr-send';btn.textContent='전송';btn.type='button';
+        const submit=()=>{const val=inp.value.trim();if(!val)return;inlineRow.remove();sendMessage(val);};
+        inp.addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
+        btn.addEventListener('click',submit);
+        inlineRow.appendChild(inp);inlineRow.appendChild(btn);
+        msgs.appendChild(inlineRow);msgs.scrollTop=msgs.scrollHeight;inp.focus();
       }
-      else{clearQR();sendMessage(v);}  /* 칩 클릭 → 즉시 전송 */
+      else{clearQR();sendMessage(v);}
     };
     row.appendChild(c);
   });
