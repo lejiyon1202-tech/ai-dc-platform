@@ -109,6 +109,34 @@ function stripJson(text){
     .replace(/\n{3,}/g,'\n\n').trim();
 }
 
+/* 세션 영속성 — localStorage 저장/복원 */
+function saveSession(){
+  if(!window._caseId)return;
+  try{localStorage.setItem('aidc_s_'+uid,JSON.stringify({id:window._caseId,h:convHistory,s:step,q:qrStep}));}catch(e){}
+}
+function clearSession(){try{localStorage.removeItem('aidc_s_'+uid);}catch(e){}}
+
+async function initChat(){
+  try{
+    const raw=localStorage.getItem('aidc_s_'+uid);
+    if(raw){
+      const sv=JSON.parse(raw);
+      if(sv.id&&sv.h?.length){
+        window._caseId=sv.id;convHistory=sv.h;step=sv.s||0;qrStep=sv.q||0;
+        updateProgress();
+        sv.h.forEach(m=>{
+          if(m.role==='user')addBubble('user',m.content);
+          else addBubble('assistant',stripJson(m.content.replace('[CASE_READY]','')));
+        });
+        addBubble('assistant','이전 대화를 이어서 진행합니다 😊');
+        if(qrStep<QR_STEPS.length)showQR(QR_STEPS[qrStep]);
+        btnSend.disabled=false;input.focus();return;
+      }
+    }
+  }catch(e){}
+  await startChat();
+}
+
 const QR_STEPS=[
   ['사원·대리','과장','차장','부장','임원·팀장','기타'],
   ['제조','금융','IT','유통·서비스','공공·교육','기타'],
@@ -214,6 +242,7 @@ async function sendMessage(text){
   }catch(e){hideTyping();addBubble('assistant','죄송합니다. 잠시 후 다시 시도해주세요. ('+e.message+')');}
   input.disabled=false;input.value='';input.style.height='';
   if(!caseData)btnSend.disabled=false;input.focus();
+  saveSession();
 }
 
 document.getElementById('btnStart').addEventListener('click',async()=>{
@@ -224,6 +253,7 @@ document.getElementById('btnStart').addEventListener('click',async()=>{
     const d=await r.json();const caseId=d.caseId||cid;
     const tr=await fetch('/api/auth/iframe-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({simId:'inbasket'}),credentials:'include'});
     const td=await tr.json();const token=td.token||'';
+    clearSession();
     location.href=`https://inbasket.3.39.80.158.nip.io?u=${encodeURIComponent(uid)}${token?'&token='+encodeURIComponent(token):''}${caseId?'&caseId='+encodeURIComponent(caseId):''}`;
   }catch(e){document.getElementById('btnStart').disabled=false;alert('시뮬 시작 실패');}
 });
@@ -231,7 +261,7 @@ document.getElementById('btnStart').addEventListener('click',async()=>{
 document.getElementById('btnRetry').addEventListener('click',()=>{
   convHistory=[];caseData=null;step=0;qrStep=0;updateProgress();
   msgs.innerHTML='';preview.style.display='none';clearQR();window._caseId=null;
-  btnSend.disabled=false;startChat();
+  clearSession();btnSend.disabled=false;startChat();
 });
 
 input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,120)+'px';btnSend.disabled=!input.value.trim();});
@@ -252,7 +282,7 @@ async function startChat(){
 (async()=>{
   try{const r=await fetch('/api/auth/me',{credentials:'include'});if(!r.ok){location.href='login.html';return;}const me=await r.json();if(!me.user){location.href='login.html';return;}learnerInfo.name=me.user.name||me.user.email||'학습자';learnerInfo.role=me.user.role||'learner';}catch(e){location.href='login.html';return;}
   try{const s=await(await fetch(`${BASE}/api/stats/learner/${uid}`)).json();learnerInfo.completedSims=s.completedSimulations||[];learnerInfo.xp=s.xp||0;learnerInfo.level=s.level||1;}catch(e){}
-  await startChat();
+  await initChat();
 })();
 </script>
 </body>
