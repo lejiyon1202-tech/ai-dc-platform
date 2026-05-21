@@ -95,6 +95,14 @@ let learnerInfo={};
 /* SVG 인라인 아바타 (CDN 의존 없음) */
 const SVG_ROBOT=`<svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="4" y="7" width="12" height="9" rx="2"/><circle cx="7.5" cy="11" r="1.5" fill="white"/><circle cx="12.5" cy="11" r="1.5" fill="white"/><rect x="8" y="14" width="4" height="1" rx="0.5" fill="white"/><rect x="9" y="4" width="2" height="3" rx="1"/><rect x="2" y="9" width="2" height="3" rx="1" opacity="0.6"/><rect x="16" y="9" width="2" height="3" rx="1" opacity="0.6"/></svg>`;
 
+/* AI 응답에서 JSON 메타데이터 블록 제거 (학습자 노출 방지) */
+function stripJson(text){
+  return text
+    .replace(/```json[\s\S]*?```/g,'')
+    .replace(/^\s*\{[^{}]*"quickReplies"[^{}]*\}\s*$/gm,'')
+    .replace(/\n{3,}/g,'\n\n').trim();
+}
+
 const QR_STEPS=[
   ['사원·대리','과장','차장','부장','임원·팀장','기타'],
   ['제조','금융','IT','유통·서비스','공공·교육','기타'],
@@ -133,8 +141,9 @@ function addBubble(role,text){
   const isAi=role==='assistant';
   const row=document.createElement('div');
   row.className='msg-row'+(isAi?'':' user');
+  const display=isAi?stripJson(text):text;
   const avatarHtml=isAi?SVG_ROBOT:`<span>${(learnerInfo.name||'나').charAt(0)}</span>`;
-  row.innerHTML=`<div class="msg-avatar ${isAi?'ai':'user'}">${avatarHtml}</div><div class="msg-bubble ${isAi?'ai':'user'}">${text.replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')}</div>`;
+  row.innerHTML=`<div class="msg-avatar ${isAi?'ai':'user'}">${avatarHtml}</div><div class="msg-bubble ${isAi?'ai':'user'}">${display.replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')}</div>`;
   msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;
 }
 
@@ -165,12 +174,13 @@ async function sendMessage(text){
         dec.decode(value,{stream:true}).split('\n').forEach(line=>{
           if(!line.startsWith('data: '))return;
           try{const p=JSON.parse(line.slice(6));
-            if(p.chunk){full+=p.chunk;bubble.innerHTML=full.replace(/\[CASE_READY\]/g,'').replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');}
+            if(p.chunk){full+=p.chunk;bubble.innerHTML=stripJson(full.replace(/\[CASE_READY\]/g,'')).replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');}
             if(p.done||p.caseReady)finalData=p;
           }catch(e){}
         });msgs.scrollTop=msgs.scrollHeight;}
     }else{const d=await r.json();hideTyping();full=(d.reply||'').replace('[CASE_READY]','').trim();finalData=d;addBubble('assistant',full);}
-    const clean=full.replace('[CASE_READY]','').trim();
+    const clean=stripJson(full.replace('[CASE_READY]','').trim());
+    if(finalData?.cleanText){const b=document.getElementById('streamBubble');if(b)b.innerHTML=finalData.cleanText.replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');}
     convHistory.push({role:'assistant',content:clean});
     step=Math.min(step+1,STEPS-1);updateProgress();
     const chips=finalData?.quickReplies||(qrStep<QR_STEPS.length?QR_STEPS[qrStep]:null);
