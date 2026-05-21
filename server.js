@@ -52,6 +52,12 @@ app.use(helmet({
       fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
       imgSrc:     ["'self'", 'data:', 'blob:'],
       connectSrc: ["'self'"],
+      frameSrc: [
+        'https://sbi.3.39.80.158.nip.io',
+        'https://inbasket.3.39.80.158.nip.io',
+        'https://gd.3.39.80.158.nip.io',
+        'https://pt.3.39.80.158.nip.io',
+      ],
     },
   },
 }));
