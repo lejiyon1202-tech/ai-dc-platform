@@ -107,6 +107,8 @@ function stripJson(text){
     .replace(/\n{3,}/g,'\n\n').trim();
 }
 
+function formatPreview(cd){if(typeof cd==='string')return cd;const p=[];if(cd.title)p.push('📋 '+cd.title);if(cd.role?.name)p.push('역할: '+[cd.role.name,cd.role.department,cd.role.company].filter(Boolean).join(' · '));if(cd.context)p.push(cd.context);if(cd.situation)p.push('📌 현재 상황\n'+cd.situation);if(cd.keyIssues?.length)p.push('⚠️ 주요 이슈\n'+cd.keyIssues.map(i=>'• '+i).join('\n'));return p.length?p.join('\n\n'):cd.title||'케이스 완성';}
+
 /* 세션 영속성 — localStorage 저장/복원 */
 function saveSession(){
   if(!window._caseId)return;
@@ -133,7 +135,7 @@ async function initChat(){
         if(sv.cd){
           caseData=sv.cd;step=STEPS-1;updateProgress();
           preview.style.display='block';
-          document.getElementById('previewBody').textContent=typeof sv.cd==='string'?sv.cd:JSON.stringify(sv.cd,null,2);
+          document.getElementById('previewBody').textContent=formatPreview(sv.cd);
           btnSend.disabled=true;
           addBubble('assistant','이전에 완성된 케이스입니다. InBasket으로 시작하거나 처음부터 다시 하실 수 있습니다. 😊');
         }else{
@@ -247,7 +249,7 @@ async function sendMessage(text){
     if(chips){showQR(chips);if(!finalData?.quickReplies)qrStep++;}
     if(finalData?.caseReady&&finalData?.caseData){
       caseData=finalData.caseData;step=STEPS-1;updateProgress();clearQR();
-      preview.style.display='block';document.getElementById('previewBody').textContent=typeof caseData==='string'?caseData:JSON.stringify(caseData,null,2);
+      preview.style.display='block';document.getElementById('previewBody').textContent=formatPreview(caseData);
       msgs.scrollTop=msgs.scrollHeight;
     }
   }catch(e){hideTyping();addBubble('assistant','죄송합니다. 잠시 후 다시 시도해주세요. ('+e.message+')');}
