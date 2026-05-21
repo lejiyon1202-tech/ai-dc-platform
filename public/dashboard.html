@@ -124,10 +124,11 @@ renderLogs();
 (async()=>{
   try{
     const me=await(await fetch('/api/auth/me',{credentials:'include'})).json();
-    const name=me.user?.name||'학습자';
+    if(!me.user){location.href='login.html';return;}
+    const name=me.user.name||me.user.email||'학습자';
     document.getElementById('userGreeting').innerHTML=`안녕하세요, ${esc(name)}님 <i class="ph ph-hand-waving" aria-hidden="true" style="color:var(--accent)"></i>`;
     document.getElementById('userSub').textContent='AI DC 학습을 시작하세요';
-  }catch(e){}
+  }catch(e){location.href='login.html';}
   try{
     const d=await(await fetch(`${BASE}/api/stats/learner/${uid}`)).json();
     const xp=d.xp||0,level=d.level||1,nextXp=level*1000;
