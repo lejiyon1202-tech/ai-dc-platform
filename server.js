@@ -19,15 +19,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '3009', 10);
 const IS_PROD = process.env.NODE_ENV === 'production';
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+const REMEMBER_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000; // 7일
 
 const app = express();
 
 // ── 인메모리 세션 스토어 ─────────────────────────────────────────
-const userSessions = new Map(); // token → { userId, createdAt }
+const userSessions = new Map(); // token → { userId, createdAt, timeout }
 setInterval(() => {
   const now = Date.now();
   for (const [t, s] of userSessions) {
-    if (now - s.createdAt > SESSION_TIMEOUT_MS) userSessions.delete(t);
+    if (now - s.createdAt > (s.timeout || SESSION_TIMEOUT_MS)) userSessions.delete(t);
   }
 }, 5 * 60 * 1000);
 
@@ -90,7 +91,7 @@ function authRequired(req, res, next) {
   const session = userSessions.get(token);
   if (!session) return res.status(401).json({ error: '세션이 만료되었습니다. 다시 로그인해주세요.' });
 
-  if (Date.now() - session.createdAt > SESSION_TIMEOUT_MS) {
+  if (Date.now() - session.createdAt > (session.timeout || SESSION_TIMEOUT_MS)) {
     userSessions.delete(token);
     return res.status(401).json({ error: '세션이 만료되었습니다. 다시 로그인해주세요.' });
   }
@@ -184,14 +185,16 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 
     resetFailedLogin(user.id);
 
+    const remember = req.body.remember === true || req.body.remember === 'true';
+    const sessionTimeout = remember ? REMEMBER_TIMEOUT_MS : SESSION_TIMEOUT_MS;
     const token = uuidv4();
-    userSessions.set(token, { userId: user.id, createdAt: Date.now() });
+    userSessions.set(token, { userId: user.id, createdAt: Date.now(), timeout: sessionTimeout });
 
     res.cookie('session_token', token, {
       httpOnly: true,
       secure: IS_PROD,
       sameSite: 'lax',
-      maxAge: SESSION_TIMEOUT_MS,
+      maxAge: sessionTimeout,
     });
 
     console.log(`[AUTH] 로그인 성공: ${emailLower}`);
