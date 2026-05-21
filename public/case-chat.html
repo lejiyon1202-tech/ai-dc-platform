@@ -162,25 +162,25 @@ async function sendMessage(text){
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,messages:convHistory,sessionId:uid,learnerInfo}),credentials:'include'});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const ct=r.headers.get('content-type')||'';
-    let full='';let finalData=null;
+    let full='';let finalData=null;let streamBubble=null;
     if(ct.includes('event-stream')){
       hideTyping();
       const row=document.createElement('div');row.className='msg-row';
-      row.innerHTML=`<div class="msg-avatar ai">${SVG_ROBOT}</div><div class="msg-bubble ai" id="streamBubble"></div>`;
+      row.innerHTML=`<div class="msg-avatar ai">${SVG_ROBOT}</div><div class="msg-bubble ai"></div>`;
       msgs.appendChild(row);
-      const bubble=document.getElementById('streamBubble');
+      streamBubble=row.querySelector('.msg-bubble');
       const reader=r.body.getReader();const dec=new TextDecoder();
       while(true){const{done,value}=await reader.read();if(done)break;
         dec.decode(value,{stream:true}).split('\n').forEach(line=>{
           if(!line.startsWith('data: '))return;
           try{const p=JSON.parse(line.slice(6));
-            if(p.chunk){full+=p.chunk;bubble.innerHTML=stripJson(full.replace(/\[CASE_READY\]/g,'')).replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');}
+            if(p.chunk){full+=p.chunk;streamBubble.innerHTML=stripJson(full.replace(/\[CASE_READY\]/g,'')).replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');}
             if(p.done||p.caseReady)finalData=p;
           }catch(e){}
         });msgs.scrollTop=msgs.scrollHeight;}
     }else{const d=await r.json();hideTyping();full=(d.reply||'').replace('[CASE_READY]','').trim();finalData=d;addBubble('assistant',full);}
     const clean=stripJson(full.replace('[CASE_READY]','').trim());
-    if(finalData?.cleanText){const b=document.getElementById('streamBubble');if(b)b.innerHTML=finalData.cleanText.replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');}
+    if(finalData?.cleanText&&streamBubble){streamBubble.innerHTML=finalData.cleanText.replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');}
     convHistory.push({role:'assistant',content:clean});
     step=Math.min(step+1,STEPS-1);updateProgress();
     const chips=finalData?.quickReplies||(qrStep<QR_STEPS.length?QR_STEPS[qrStep]:null);
