@@ -14,6 +14,7 @@ import {
   incrementFailedLogin, resetFailedLogin, purgeInvalidNames,
 } from './data/db.js';
 import adminRouter from './routes/admin.js';
+import casesRouter from './routes/cases.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '3009', 10);
@@ -71,6 +72,11 @@ const authLimiter = rateLimit({
   windowMs: 60_000, max: 5,
   standardHeaders: true, legacyHeaders: false,
   message: { error: '인증 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+});
+const casesLimiter = rateLimit({
+  windowMs: 15 * 60_000, max: 50,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: '케이스 생성 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
 });
 
 app.use(globalLimiter);
@@ -241,6 +247,9 @@ app.post('/api/auth/iframe-token', authRequired, (req, res) => {
 
 // ── Admin Routes ─────────────────────────────────────────────────
 app.use('/api/admin', authRequired, adminRouter);
+
+// ── Cases Routes ─────────────────────────────────────────────────
+app.use('/api/cases', authRequired, casesLimiter, casesRouter);
 
 // ── Health ───────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({

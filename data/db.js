@@ -62,6 +62,18 @@ export async function initDb() {
       created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
     );
   `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS cases (
+      id                   TEXT PRIMARY KEY,
+      user_id              TEXT NOT NULL REFERENCES users(id),
+      conversation_history TEXT NOT NULL DEFAULT '[]',
+      case_data            TEXT,
+      sim_type             TEXT NOT NULL DEFAULT 'inbasket',
+      status               TEXT NOT NULL DEFAULT 'drafting',
+      created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+      updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
+    );
+  `);
   persist();
 }
 
@@ -111,6 +123,62 @@ export function resetFailedLogin(id) {
   db.run("UPDATE users SET failed_attempts=0,locked_until=NULL,last_login=strftime('%Y-%m-%d %H:%M:%S','now') WHERE id=?",
     [id]);
   persist();
+}
+
+// ── Cases 함수 ───────────────────────────────────────────────────
+export function createCase(id, userId, simType = 'inbasket') {
+  db.run(
+    "INSERT INTO cases (id,user_id,sim_type) VALUES (?,?,?)",
+    [id, userId, simType]
+  );
+  persist();
+  return getCaseById(id);
+}
+
+export function getCaseById(id) {
+  return queryRow('SELECT * FROM cases WHERE id=?', [id]);
+}
+
+export function updateCaseHistory(id, history, caseData = null, status = null) {
+  const historyJson = JSON.stringify(history);
+  if (caseData !== null && status !== null) {
+    db.run(
+      "UPDATE cases SET conversation_history=?,case_data=?,status=?,updated_at=strftime('%Y-%m-%d %H:%M:%S','now') WHERE id=?",
+      [historyJson, JSON.stringify(caseData), status, id]
+    );
+  } else if (caseData !== null) {
+    db.run(
+      "UPDATE cases SET conversation_history=?,case_data=?,updated_at=strftime('%Y-%m-%d %H:%M:%S','now') WHERE id=?",
+      [historyJson, JSON.stringify(caseData), id]
+    );
+  } else {
+    db.run(
+      "UPDATE cases SET conversation_history=?,updated_at=strftime('%Y-%m-%d %H:%M:%S','now') WHERE id=?",
+      [historyJson, id]
+    );
+  }
+  persist();
+}
+
+export function finalizeCase(id, caseData) {
+  db.run(
+    "UPDATE cases SET case_data=?,status='finalized',updated_at=strftime('%Y-%m-%d %H:%M:%S','now') WHERE id=?",
+    [JSON.stringify(caseData), id]
+  );
+  persist();
+}
+
+export function listUserCases(userId, simType = null) {
+  if (simType) {
+    return queryAll(
+      "SELECT id,sim_type,status,case_data,created_at FROM cases WHERE user_id=? AND sim_type=? ORDER BY created_at DESC",
+      [userId, simType]
+    );
+  }
+  return queryAll(
+    "SELECT id,sim_type,status,case_data,created_at FROM cases WHERE user_id=? ORDER BY created_at DESC",
+    [userId]
+  );
 }
 
 export function purgeInvalidNames() {
