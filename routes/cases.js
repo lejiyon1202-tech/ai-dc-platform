@@ -333,6 +333,121 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// GET /api/cases/:id/inbasket-emails — 케이스 기반 이메일 18통 동적 생성 (InBasket 서버 전용)
+router.get('/:id/inbasket-emails', async (req, res) => {
+  try {
+    const caseRecord = getCaseById(req.params.id);
+    if (!caseRecord) return res.status(404).json({ error: '케이스를 찾을 수 없습니다.' });
+
+    // InBasket 서버 또는 본인만 접근 가능
+    const isOwner = caseRecord.user_id === req.userId;
+    const simToken = req.headers['x-sim-token'];
+    let isSimServer = false;
+    if (simToken && process.env.SIM_JWT_SECRET) {
+      try {
+        const { default: jwt } = await import('jsonwebtoken');
+        jwt.verify(simToken, process.env.SIM_JWT_SECRET, { algorithms: ['HS256'] });
+        isSimServer = true;
+      } catch {}
+    }
+    if (!isOwner && !isSimServer) return res.status(403).json({ error: '접근 권한이 없습니다.' });
+
+    if (!caseRecord.case_data) return res.status(400).json({ error: '케이스 확정 후 사용 가능합니다.' });
+    const caseData = JSON.parse(caseRecord.case_data);
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY 미설정' });
+
+    const emailPrompt = `당신은 AI 인바스켓(In-Basket) 시뮬레이션 설계 전문가입니다.
+아래 케이스 데이터를 기반으로 인바스켓 시뮬레이션용 이메일 18통을 설계하세요.
+
+## 케이스 정보
+- 직급/역할: ${caseData.role?.name || '팀장'}
+- 부서/회사: ${caseData.role?.department || '영업팀'} / ${caseData.role?.company || '회사'}
+- 상황: ${caseData.situation || '업무 상황'}
+- 주요 이슈: ${(caseData.keyIssues || []).join(', ')}
+- 관계자: ${(caseData.stakeholders || []).map(s => `${s.name}(${s.role})`).join(', ')}
+- 학습자 맥락: ${caseData.learner_context || ''}
+- 사전 성찰: ${caseData.pre_reflection || ''}
+- 학습 목표: ${(caseData.learning_goals || []).join(', ')}
+
+## 이메일 18통 구성 기준
+- 긴급·중요(urgent-important): 4통 — 즉각 처리 필요
+- 중요·일반(important-normal): 10통 — 중요하지만 시간 여유 있음
+- 일반·배경(normal-reference): 4통 — 참조용, 배경 정보
+- 트랩 이메일 2~3통 포함 (중요해 보이지만 실제 낮은 우선순위 or 낮아 보이지만 실제 중요)
+- 발신자: 상위자·동료·부하직원·외부관계자 골고루 포함
+- {{learner_name}}으로 수신자 치환 패턴 사용
+
+다음 JSON 배열 형식으로만 응답하세요 (마크다운 없이):
+[
+  {
+    "id": "email-001",
+    "from": {"name": "발신자 이름", "role": "직책", "avatar": "👤"},
+    "to": "{{learner_name}}",
+    "subject": "이메일 제목",
+    "body": "이메일 본문 (2~4문장, 자연스러운 업무 이메일 형식)",
+    "receivedAt": "오늘 오전 8:30",
+    "type": "urgent-important",
+    "priority": "high",
+    "isRead": false,
+    "attachments": [],
+    "linkedEmails": [],
+    "hiddenContext": "채점자용: 이 이메일의 숨겨진 맥락과 올바른 대응",
+    "optimalActions": {
+      "best": "최선의 행동",
+      "acceptable": "수용 가능한 행동",
+      "poor": "잘못된 행동"
+    },
+    "scoringDimensions": ["prioritization", "delegation"],
+    "dynamicTrigger": {"onReply": "답장 시 후속 상황", "onDelegate": "위임 시 상황", "onIgnore": "무시 시 결과"}
+  }
+]`;
+
+    const claudeRes = await fetch(CLAUDE_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: CLAUDE_MODEL,
+        max_tokens: 8192,
+        messages: [{ role: 'user', content: emailPrompt }],
+      }),
+    });
+
+    if (!claudeRes.ok) {
+      const errText = await claudeRes.text();
+      console.error('[CASES] Email gen error:', errText);
+      return res.status(500).json({ error: '이메일 생성 중 오류가 발생했습니다.' });
+    }
+
+    const claudeData = await claudeRes.json();
+    const rawText = claudeData.content?.[0]?.text || '';
+    let emails = [];
+    try {
+      const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) emails = JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      console.error('[CASES] Email JSON parse error:', e.message);
+      return res.status(500).json({ error: '이메일 데이터 파싱 오류가 발생했습니다.' });
+    }
+
+    if (!Array.isArray(emails) || emails.length === 0) {
+      return res.status(500).json({ error: '이메일 생성 결과가 없습니다.' });
+    }
+
+    console.log(`[CASES] InBasket 이메일 ${emails.length}통 생성: ${req.params.id}`);
+    res.json({ caseId: req.params.id, emails, count: emails.length });
+
+  } catch (err) {
+    console.error('[CASES] InBasket emails error:', err.message);
+    res.status(500).json({ error: '이메일 생성 중 오류가 발생했습니다.' });
+  }
+});
+
 // GET /api/cases — 내 케이스 목록
 router.get('/', (req, res) => {
   try {
