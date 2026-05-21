@@ -122,7 +122,6 @@ async function initChat(){
     if(raw){
       const sv=JSON.parse(raw);
       if(sv.id&&sv.h?.length){
-        // 서버에서 케이스 유효성 확인
         const chk=await fetch(`/api/cases/${sv.id}`,{credentials:'include'});
         if(!chk.ok){clearSession();await startChat();return;}
         window._caseId=sv.id;convHistory=sv.h;step=sv.s||0;qrStep=sv.q||0;
@@ -131,7 +130,6 @@ async function initChat(){
           if(m.role==='user')addBubble('user',m.content);
           else addBubble('assistant',stripJson(m.content.replace('[CASE_READY]','')));
         });
-        // 케이스 완성 복원
         if(sv.cd){
           caseData=sv.cd;step=STEPS-1;updateProgress();
           preview.style.display='block';
