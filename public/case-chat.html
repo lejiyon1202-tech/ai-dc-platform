@@ -22,9 +22,10 @@
     .msg-row { display:flex; gap:var(--sp-sm); align-items:flex-end; }
     .msg-row.user { flex-direction:row-reverse; }
 
-    /* 아바타 — AI: 골드 accent + robot 아이콘 / 학습자: 이름 첫 글자 */
+    /* 아바타 — AI: 골드 gradient + SVG 로봇 / 학습자: 이름 첫 글자 */
     .msg-avatar { width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
-    .msg-avatar.ai { background:linear-gradient(135deg,var(--accent-dim),rgba(184,146,58,0.22));border:1.5px solid var(--accent-border);color:var(--accent);font-size:20px;box-shadow:0 2px 8px rgba(184,146,58,0.18); }
+    .msg-avatar.ai { background:linear-gradient(135deg,var(--accent-dim),rgba(184,146,58,0.22));border:1.5px solid var(--accent-border);color:var(--accent);box-shadow:0 2px 8px rgba(184,146,58,0.18); }
+    .msg-avatar.ai svg { width:22px;height:22px; }
     .msg-avatar.user { background:var(--bg-card);border:var(--border-base);color:var(--text-secondary);font-size:var(--fs-sm);font-weight:var(--fw-bold); }
 
     .msg-bubble { max-width:72%;padding:var(--sp-sm) var(--sp-md);border-radius:var(--radius-lg);font-size:var(--fs-base);line-height:1.6; }
@@ -91,6 +92,9 @@ const preview=document.getElementById('preview');
 let convHistory=[];let caseData=null;let step=0;const STEPS=7;
 let learnerInfo={};
 
+/* SVG 인라인 아바타 (CDN 의존 없음) */
+const SVG_ROBOT=`<svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="4" y="7" width="12" height="9" rx="2"/><circle cx="7.5" cy="11" r="1.5" fill="white"/><circle cx="12.5" cy="11" r="1.5" fill="white"/><rect x="8" y="14" width="4" height="1" rx="0.5" fill="white"/><rect x="9" y="4" width="2" height="3" rx="1"/><rect x="2" y="9" width="2" height="3" rx="1" opacity="0.6"/><rect x="16" y="9" width="2" height="3" rx="1" opacity="0.6"/></svg>`;
+
 const QR_STEPS=[
   ['사원·대리','과장','차장','부장','임원·팀장','기타'],
   ['제조','금융','IT','유통·서비스','공공·교육','기타'],
@@ -117,7 +121,7 @@ function showQR(chips){
     c.className='qr-chip';c.textContent=v;c.type='button';
     c.onclick=()=>{
       if(v==='기타'){clearQR();input.value='';input.placeholder='직접 입력하세요...';btnSend.disabled=true;input.focus();}
-      else{input.value=v;input.style.height='auto';btnSend.disabled=false;input.focus();}
+      else{clearQR();sendMessage(v);}  /* 칩 클릭 → 즉시 전송 */
     };
     row.appendChild(c);
   });
@@ -129,16 +133,14 @@ function addBubble(role,text){
   const isAi=role==='assistant';
   const row=document.createElement('div');
   row.className='msg-row'+(isAi?'':' user');
-  const avatarHtml=isAi
-    ?'<i class="ph ph-robot" aria-hidden="true"></i>'
-    :`<span aria-hidden="true">${(learnerInfo.name||'나').charAt(0)}</span>`;
+  const avatarHtml=isAi?SVG_ROBOT:`<span>${(learnerInfo.name||'나').charAt(0)}</span>`;
   row.innerHTML=`<div class="msg-avatar ${isAi?'ai':'user'}">${avatarHtml}</div><div class="msg-bubble ${isAi?'ai':'user'}">${text.replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')}</div>`;
   msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;
 }
 
 function showTyping(){
   const row=document.createElement('div');row.className='msg-row';row.id='typingRow';
-  row.innerHTML=`<div class="msg-avatar ai"><i class="ph ph-robot" aria-hidden="true"></i></div><div class="msg-bubble ai"><div class="msg-typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+  row.innerHTML=`<div class="msg-avatar ai">${SVG_ROBOT}</div><div class="msg-bubble ai"><div class="msg-typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
   msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;
 }
 function hideTyping(){document.getElementById('typingRow')?.remove();}
@@ -155,7 +157,7 @@ async function sendMessage(text){
     if(ct.includes('event-stream')){
       hideTyping();
       const row=document.createElement('div');row.className='msg-row';
-      row.innerHTML=`<div class="msg-avatar ai"><i class="ph ph-robot" aria-hidden="true"></i></div><div class="msg-bubble ai" id="streamBubble"></div>`;
+      row.innerHTML=`<div class="msg-avatar ai">${SVG_ROBOT}</div><div class="msg-bubble ai" id="streamBubble"></div>`;
       msgs.appendChild(row);
       const bubble=document.getElementById('streamBubble');
       const reader=r.body.getReader();const dec=new TextDecoder();
