@@ -96,10 +96,8 @@ const preview=document.getElementById('preview');
 let convHistory=[];let caseData=null;let step=0;const STEPS=7;
 let learnerInfo={};
 
-/* SVG 인라인 아바타 (CDN 의존 없음) */
 const SVG_ROBOT=`<svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="4" y="7" width="12" height="9" rx="2"/><circle cx="7.5" cy="11" r="1.5" fill="white"/><circle cx="12.5" cy="11" r="1.5" fill="white"/><rect x="8" y="14" width="4" height="1" rx="0.5" fill="white"/><rect x="9" y="4" width="2" height="3" rx="1"/><rect x="2" y="9" width="2" height="3" rx="1" opacity="0.6"/><rect x="16" y="9" width="2" height="3" rx="1" opacity="0.6"/></svg>`;
-
-/* AI 응답에서 JSON 메타데이터 블록 제거 (학습자 노출 방지) */
+function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
 function stripJson(text){
   return text
     .replace(/```json[\s\S]*?```/g,'')
@@ -196,8 +194,8 @@ function addBubble(role,text){
   const isAi=role==='assistant';
   const row=document.createElement('div');
   row.className='msg-row'+(isAi?'':' user');
-  const display=isAi?stripJson(text):text;
-  const avatarHtml=isAi?SVG_ROBOT:`<span>${(learnerInfo.name||'나').charAt(0)}</span>`;
+  const display=isAi?stripJson(text):escapeHtml(text);
+  const avatarHtml=isAi?SVG_ROBOT:`<span>${escapeHtml((learnerInfo.name||'나').charAt(0))}</span>`;
   row.innerHTML=`<div class="msg-avatar ${isAi?'ai':'user'}">${avatarHtml}</div><div class="msg-bubble ${isAi?'ai':'user'}">${display.replace(/\n/g,'<br>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')}</div>`;
   msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;
 }
@@ -291,7 +289,7 @@ async function startChat(){
 }
 
 (async()=>{
-  try{const r=await fetch('/api/auth/me',{credentials:'include'});if(!r.ok){location.href='login.html';return;}const me=await r.json();if(!me.user){location.href='login.html';return;}if(!uid)uid=me.user.id;learnerInfo.name=me.user.name||me.user.email||'학습자';learnerInfo.role=me.user.role||'learner';}catch(e){location.href='login.html';return;}
+  try{const r=await fetch('/api/auth/me',{credentials:'include'});if(!r.ok){location.href='login.html';return;}const me=await r.json();if(!me.user){location.href='login.html';return;}uid=me.user.id;learnerInfo.name=me.user.name||me.user.email||'학습자';learnerInfo.role=me.user.role||'learner';}catch(e){location.href='login.html';return;}
   try{const s=await(await fetch(`${BASE}/api/stats/learner/${uid}`)).json();learnerInfo.completedSims=s.completedSimulations||[];learnerInfo.xp=s.xp||0;learnerInfo.level=s.level||1;}catch(e){}
   await initChat();
 })();
