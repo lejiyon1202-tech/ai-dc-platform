@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI DC — 케이스 만들기</title>
+  <link rel="stylesheet" href="../css/design-system.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    body { min-height:100vh; display:flex; flex-direction:column; padding:0; margin:0; background:var(--bg-base); }
+    .cc-header { display:flex; align-items:center; gap:var(--sp-md); padding:var(--sp-md) var(--sp-lg); border-bottom:var(--border-base); background:var(--bg-card); flex-shrink:0; }
+    .cc-back { width:36px;height:36px;border:var(--border-base);border-radius:var(--radius-md);background:var(--bg-base);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);transition:all var(--transition); }
+    .cc-back:hover { border-color:var(--bc-hover); }
+    .cc-title { font-size:var(--fs-base); font-weight:var(--fw-bold); flex:1; }
+    .progress-steps { display:flex; gap:6px; align-items:center; }
+    .step-dot { width:8px;height:8px;border-radius:50%;background:var(--track-bg);transition:background var(--transition); }
+    .step-dot.active { background:var(--accent); }
+    .step-dot.done { background:color-mix(in srgb,var(--accent) 50%,transparent); }
+    .cc-msgs { flex:1; overflow-y:auto; padding:var(--sp-lg); display:flex; flex-direction:column; gap:var(--sp-md); }
+    .msg-row { display:flex; gap:var(--sp-sm); align-items:flex-end; }
+    .msg-row.user { flex-direction:row-reverse; }
+    .msg-avatar { width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
+    .msg-avatar.ai { background:var(--accent-dim); border:var(--border-accent); color:var(--accent); }
+    .msg-avatar.user { background:var(--bg-card); border:var(--border-base); color:var(--text-secondary); }
+    .msg-bubble { max-width:72%; padding:var(--sp-sm) var(--sp-md); border-radius:var(--radius-lg); font-size:var(--fs-base); line-height:1.6; }
+    .msg-bubble.ai { background:var(--bg-card); border:var(--border-base); border-bottom-left-radius:4px; }
+    .msg-bubble.user { background:var(--accent); color:var(--text-on-accent); border-bottom-right-radius:4px; }
+    .msg-typing { display:flex; gap:4px; padding:10px 14px; }
+    .typing-dot { width:6px;height:6px;border-radius:50%;background:var(--text-muted);animation:typing 1.2s infinite; }
+    .typing-dot:nth-child(2){animation-delay:0.2s;} .typing-dot:nth-child(3){animation-delay:0.4s;}
+    @keyframes typing { 0%,60%,100%{transform:translateY(0);} 30%{transform:translateY(-6px);} }
+    .cc-preview { margin:var(--sp-sm) var(--sp-lg); background:var(--bg-card); border:var(--border-accent); border-radius:var(--radius-lg); padding:var(--sp-md) var(--sp-lg); box-shadow:var(--shadow-glow); display:none; }
+    .preview-title { font-size:var(--fs-xs);font-weight:var(--fw-medium);color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--sp-sm); }
+    .preview-body { font-size:var(--fs-base); color:var(--text-secondary); line-height:1.6; white-space:pre-wrap; }
+    .preview-actions { display:flex; gap:var(--sp-sm); margin-top:var(--sp-md); flex-wrap:wrap; }
+    .btn-sim { padding:8px 18px; border-radius:var(--radius-pill); border:none; background:var(--accent); color:var(--text-on-accent); font-size:var(--fs-sm); font-weight:var(--fw-bold); cursor:pointer; transition:opacity var(--transition); }
+    .btn-sim:hover { opacity:.88; }
+    .btn-retry { padding:8px 16px; border-radius:var(--radius-pill); border:var(--border-base); background:var(--bg-base); color:var(--text-secondary); font-size:var(--fs-sm); cursor:pointer; }
+    .cc-input-area { padding:var(--sp-md) var(--sp-lg); border-top:var(--border-base); background:var(--bg-card); display:flex; gap:var(--sp-sm); align-items:flex-end; flex-shrink:0; }
+    .cc-input { flex:1; resize:none; border:var(--border-base); border-radius:var(--radius-md); padding:10px 14px; font-size:var(--fs-sm); font-family:var(--font-base); background:var(--bg-base); color:var(--text-primary); min-height:44px; max-height:120px; transition:border-color var(--transition); }
+    .cc-input:focus { outline:none; border-color:var(--accent-border); }
+    .btn-send { width:44px;height:44px;border:none;border-radius:var(--radius-md);background:var(--accent);color:var(--text-on-accent);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:opacity var(--transition); }
+    .btn-send:disabled { opacity:.4; cursor:default; }
+    .btn-send:not(:disabled):hover { opacity:.88; }
+  </style>
+</head>
+<body>
+
+<header class="cc-header">
+  <button class="cc-back" onclick="history.back()" aria-label="뒤로가기"><i class="ph ph-arrow-left"></i></button>
+  <div class="cc-title">케이스 만들기</div>
+  <div class="progress-steps" id="progressSteps" aria-label="진행 단계">
+    <div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div>
+  </div>
+</header>
+
+<div class="cc-msgs" id="msgs"></div>
+
+<div class="cc-preview" id="preview">
+  <div class="preview-title"><i class="ph ph-note-pencil"></i> 케이스 미리보기</div>
+  <div class="preview-body" id="previewBody"></div>
+  <div class="preview-actions">
+    <button class="btn-sim" id="btnStart"><i class="ph ph-play-circle"></i> InBasket으로 시작</button>
+    <button class="btn-retry" id="btnRetry"><i class="ph ph-arrow-clockwise"></i> 다시 만들기</button>
+  </div>
+</div>
+
+<div class="cc-input-area">
+  <textarea id="ccInput" class="cc-input" placeholder="자유롭게 입력하세요..." rows="1" aria-label="메시지 입력"></textarea>
+  <button id="btnSend" class="btn-send" disabled aria-label="전송"><i class="ph ph-paper-plane-tilt"></i></button>
+</div>
+
+<script>
+(async()=>{try{const r=await fetch('/api/auth/me',{credentials:'include'});if(!r.ok)location.href='login.html';}catch(e){location.href='login.html';}})();
+const uid=new URLSearchParams(location.search).get('u')||'learner-demo';
+const msgs=document.getElementById('msgs');
+const input=document.getElementById('ccInput');
+const btnSend=document.getElementById('btnSend');
+const preview=document.getElementById('preview');
+let history=[];
+let caseData=null;
+let step=0;
+const STEPS=5;
+
+function updateProgress(){
+  document.querySelectorAll('.step-dot').forEach((d,i)=>{
+    d.className='step-dot'+(i<step?' done':i===step?' active':'');
+  });
+}
+
+function addBubble(role,text){
+  const isAi=role==='assistant';
+  const row=document.createElement('div');
+  row.className='msg-row'+(isAi?'':' user');
+  row.innerHTML=`<div class="msg-avatar ${isAi?'ai':'user'}" aria-hidden="true"><i class="ph ${isAi?'ph-robot':'ph-user'}"></i></div><div class="msg-bubble ${isAi?'ai':'user'}">${text.replace(/\n/g,'<br>')}</div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop=msgs.scrollHeight;
+  return row;
+}
+
+function showTyping(){
+  const row=document.createElement('div');
+  row.className='msg-row';row.id='typingRow';
+  row.innerHTML=`<div class="msg-avatar ai" aria-hidden="true"><i class="ph ph-robot"></i></div><div class="msg-bubble ai"><div class="msg-typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+  msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;
+}
+function hideTyping(){document.getElementById('typingRow')?.remove();}
+
+async function sendMessage(text){
+  btnSend.disabled=true;input.disabled=true;
+  history.push({role:'user',content:text});
+  addBubble('user',text);
+  showTyping();
+  try{
+    const r=await fetch('/api/cases/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history,sessionId:uid}),credentials:'include'});
+    const d=await r.json();
+    hideTyping();
+    const reply=d.reply||'';
+    const clean=reply.replace('[CASE_READY]','').trim();
+    history.push({role:'assistant',content:clean});
+    addBubble('assistant',clean);
+    step=Math.min(step+1,STEPS-1);
+    updateProgress();
+    if(d.caseReady&&d.caseData){
+      caseData=d.caseData;step=STEPS-1;updateProgress();
+      preview.style.display='block';
+      document.getElementById('previewBody').textContent=typeof caseData==='string'?caseData:JSON.stringify(caseData,null,2);
+      msgs.scrollTop=msgs.scrollHeight;
+    }
+  }catch(e){hideTyping();addBubble('assistant','죄송합니다. 잠시 후 다시 시도해주세요.');}
+  input.disabled=false;input.value='';input.style.height='';
+  if(!caseData)btnSend.disabled=false;
+  input.focus();
+}
+
+document.getElementById('btnStart').addEventListener('click',async()=>{
+  if(!caseData)return;
+  document.getElementById('btnStart').disabled=true;
+  try{
+    const r=await fetch('/api/cases/finalize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({caseData,simType:'inbasket'}),credentials:'include'});
+    const d=await r.json();
+    const caseId=d.caseId;
+    const tr=await fetch('/api/auth/iframe-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({simId:'inbasket'}),credentials:'include'});
+    const td=await tr.json();
+    const token=td.token||'';
+    const src=`https://inbasket.3.39.80.158.nip.io?u=${encodeURIComponent(uid)}${token?'&token='+encodeURIComponent(token):''}${caseId?'&caseId='+encodeURIComponent(caseId):''}`;
+    location.href=src;
+  }catch(e){document.getElementById('btnStart').disabled=false;alert('시뮬 시작에 실패했습니다.');}
+});
+
+document.getElementById('btnRetry').addEventListener('click',()=>{
+  history=[];caseData=null;step=0;updateProgress();
+  msgs.innerHTML='';preview.style.display='none';
+  btnSend.disabled=false;input.disabled=false;
+  addBubble('assistant','처음부터 다시 시작할게요! 어떤 상황의 케이스로 연습하고 싶으신가요?');
+});
+
+input.addEventListener('input',()=>{
+  btnSend.disabled=!input.value.trim()&&!caseData;
+  input.style.height='auto';input.style.height=Math.min(input.scrollHeight,120)+'px';
+});
+input.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(input.value.trim())btnSend.click();}
+});
+btnSend.addEventListener('click',()=>{
+  const text=input.value.trim();if(!text)return;
+  sendMessage(text);
+});
+
+addBubble('assistant','안녕하세요! AI 케이스 빌더입니다.\n어떤 상황으로 인바스켓 시뮬을 연습하고 싶으신가요?\n예) "팀장으로서 인사 평가 시즌에 처리해야 할 긴급 현안들"');
+btnSend.disabled=false;
+</script>
+</body>
+</html>

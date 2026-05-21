@@ -97,6 +97,9 @@
   <div class="d-card dash-col-wide" aria-label="시뮬레이션 목록">
     <div class="d-card-title"><i class="ph ph-play-circle" aria-hidden="true"></i>AI 시뮬레이션</div>
     <div class="sim-recommend" id="simGrid"></div>
+    <a href="case-chat.html" id="caseLink" style="display:inline-flex;align-items:center;gap:6px;margin-top:var(--sp-md);font-size:var(--fs-xs);color:var(--accent);text-decoration:none;padding:5px 12px;border:var(--border-accent);border-radius:var(--radius-pill);background:var(--accent-dim)">
+      <i class="ph ph-magic-wand" aria-hidden="true"></i>내 케이스로 시작
+    </a>
   </div>
   <div class="d-card" aria-label="최근 성장 기록">
     <div class="d-card-title"><i class="ph ph-clock-clockwise" aria-hidden="true"></i>최근 성장 기록</div>
@@ -163,6 +166,7 @@ let logs=[{name:'학습을 시작하세요',comp:'성장',xp:0,color:'var(--acce
 function renderLogs(){const gl=document.getElementById('growthLog');gl.innerHTML='';logs.forEach(l=>{gl.insertAdjacentHTML('beforeend',`<div class="log-item"><div class="log-dot" style="background:${l.color}" aria-hidden="true"></div><div class="log-text">${esc(l.name)} <span style="color:var(--text-muted)">· ${esc(l.comp)}</span></div>${l.xp?`<div class="log-xp">+${l.xp} XP</div>`:''}</div>`);});}
 function renderChallenges(completed){completedSims=completed;const cl=document.getElementById('challengeList');cl.innerHTML='';const done=SIM_CHALLENGES.filter(c=>completed.includes(c.id)).length;document.getElementById('challengeCount').textContent=`${done}/${SIM_CHALLENGES.length} 완료`;SIM_CHALLENGES.forEach(c=>{const isDone=completed.includes(c.id);const color=isDone?'var(--comp-3)':'var(--accent)';cl.insertAdjacentHTML('beforeend',`<div class="challenge-item"><div class="ch-status" style="background:${color}" aria-hidden="true"></div><div class="ch-info"><div class="ch-name">${c.name}</div><div class="ch-prog">${isDone?'완료':'미완료'}</div></div><div class="ch-xp">${isDone?'+'+c.xp+' XP':'진행 중'}</div></div>`);});}
 renderChallenges([]);renderLogs();
+document.getElementById('caseLink').href='case-chat.html?u='+uid;
 (async()=>{
   try{const me=await(await fetch('/api/auth/me',{credentials:'include'})).json();if(!me.user){location.href='login.html';return;}const name=me.user.name||me.user.email||'학습자';document.getElementById('userGreeting').innerHTML=`안녕하세요, ${esc(name)}님 <i class="ph ph-hand-waving" aria-hidden="true" style="color:var(--accent)"></i>`;}catch(e){location.href='login.html';}
   try{const d=await(await fetch(`${BASE}/api/stats/learner/${uid}`)).json();const xp=d.xp||0,level=d.level||1,nextXp=level*1000;document.getElementById('xpTotal').textContent=xp.toLocaleString()+' XP';document.getElementById('xpMax').textContent=`Lv.${level+1}까지 ${(nextXp-xp).toLocaleString()} XP 남음`;document.getElementById('xpFill').style.width=Math.min((xp%1000)/10,100)+'%';document.getElementById('xpNext').textContent=`다음 레벨: ${nextXp.toLocaleString()} XP`;document.getElementById('levelText').textContent=`Lv.${level} 성장 중`;renderChallenges(d.completedSimulations||[]);if(d.recentStatements?.length)logs=d.recentStatements.slice(0,3).map(s=>({name:`${s.sim||''} ${s.verb||''}`.trim()||'학습 완료',comp:'성장',xp:s.score||10,color:'var(--accent)'}));renderLogs();}catch(e){}
