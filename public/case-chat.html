@@ -40,6 +40,9 @@
     .qr-row { display:flex;flex-wrap:wrap;gap:8px;padding-left:48px;margin-top:-6px; }
     .qr-chip { padding:6px 16px;border-radius:var(--radius-pill);border:var(--border-base);background:var(--bg-card);font-size:var(--fs-sm);cursor:pointer;transition:all var(--transition);color:var(--text-secondary); }
     .qr-chip:hover { border-color:var(--accent-border);color:var(--accent);background:var(--accent-dim); }
+    .qr-hint { padding:6px 48px; font-size:var(--fs-xs); color:var(--accent); display:flex; align-items:center; gap:6px; animation:fadeIn 0.2s; }
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+    .cc-input.hint-active { border-color:var(--accent-border); box-shadow:0 0 0 3px var(--accent-dim); }
 
     .cc-preview { margin:var(--sp-sm) var(--sp-lg);background:var(--bg-card);border:var(--border-accent);border-radius:var(--radius-lg);padding:var(--sp-md) var(--sp-lg);box-shadow:var(--shadow-glow);display:none;flex-shrink:0; }
     .preview-title { font-size:var(--fs-xs);font-weight:var(--fw-medium);color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--sp-sm); }
@@ -117,7 +120,7 @@ function updateProgress(){
   });
 }
 
-function clearQR(){ document.getElementById('qrRow')?.remove(); }
+function clearQR(){ document.getElementById('qrRow')?.remove(); document.getElementById('qrHint')?.remove(); input.classList.remove('hint-active'); }
 
 function showQR(chips){
   clearQR();
@@ -128,7 +131,14 @@ function showQR(chips){
     const c=document.createElement('button');
     c.className='qr-chip';c.textContent=v;c.type='button';
     c.onclick=()=>{
-      if(v==='기타'){clearQR();input.value='';input.placeholder='직접 입력하세요...';btnSend.disabled=true;input.focus();}
+      if(v==='기타'){
+        clearQR();
+        const hint=document.createElement('div');hint.className='qr-hint';hint.id='qrHint';
+        hint.innerHTML='<i class="ph ph-pencil-simple" aria-hidden="true"></i> 아래에 직접 입력해주세요';
+        msgs.appendChild(hint);msgs.scrollTop=msgs.scrollHeight;
+        input.value='';input.placeholder='자유롭게 입력하세요...';btnSend.disabled=true;
+        input.classList.add('hint-active');input.focus();
+      }
       else{clearQR();sendMessage(v);}  /* 칩 클릭 → 즉시 전송 */
     };
     row.appendChild(c);
