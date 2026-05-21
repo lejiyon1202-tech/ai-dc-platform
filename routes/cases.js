@@ -263,6 +263,7 @@ router.post('/:id/chat', async (req, res) => {
     }
 
     let fullText = '';
+    let sentLen = 0; // 클라이언트로 이미 보낸 텍스트 길이
     const reader = claudeRes.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -281,9 +282,15 @@ router.post('/:id/chat', async (req, res) => {
         try {
           const parsed = JSON.parse(data);
           if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
-            const chunk = parsed.delta.text;
-            fullText += chunk;
-            res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+            fullText += parsed.delta.text;
+            // ```json 블록 시작 전까지만 스트리밍 전송 (JSON raw 노출 방지)
+            const jsonStart = fullText.indexOf('```json');
+            const safeEnd = jsonStart >= 0 ? jsonStart : fullText.length;
+            const toSend = fullText.slice(sentLen, safeEnd);
+            if (toSend.length > 0) {
+              res.write(`data: ${JSON.stringify({ chunk: toSend })}\n\n`);
+              sentLen += toSend.length;
+            }
           }
         } catch {}
       }
